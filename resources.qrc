@@ -1,0 +1,45 @@
+<RCC>
+    <qresource prefix="/"/>
+    <file>cards/1.png</file>
+    <file>cards/2.png</file>
+    <file>cards/3.png</file>
+    <file>cards/4.png</file>
+    <file>cards/5.png</file>
+    <file>cards/6.png</file>
+    <file>cards/7.png</file>
+    <file>cards/8.png</file>
+    <file>cards/9.png</file>
+    <file>cards/10.png</file>
+    <file>cards/11.png</file>
+    <file>cards/12.png</file>
+    <file>cards/13.png</file>
+    <file>cards/14.png</file>
+    <file>cards/15.png</file>
+    <file>cards/16.png</file>
+    <file>cards/17.png</file>
+    <file>cards/18.png</file>
+    <file>cards/19.png</file>
+    <file>cards/20.png</file>
+    <file>cards/21.png</file>
+    <file>cards/22.png</file>
+    <file>cards/23.png</file>
+    <file>cards/24.png</file>
+    <file>cards/25.png</file>
+    <file>cards/26.png</file>
+    <file>cards/27.png</file>
+    <file>cards/28.png</file>
+    <file>cards/29.png</file>
+    <file>cards/30.png</file>
+    <file>cards/31.png</file>
+    <file>cards/32.png</file>
+    <file>cards/33.png</file>
+    <file>cards/34.png</file>
+    <file>cards/35.png</file>
+    <file>cards/36.png</file>
+    <file>cards/37.png</file>
+    <file>cards/38.png</file>
+    <file>cards/39.png</file>
+    <file>cards/40.png</file>
+    <file>cards/back-teal.png</file>
+    </qresource>
+</RCC>
