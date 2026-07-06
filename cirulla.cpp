@@ -173,10 +173,16 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
     p2StatsContainer->setFixedWidth(100);
     QVBoxLayout *statsLayout = new QVBoxLayout(p2StatsContainer);
 
-    mazzoPreseLabel = new QLabel("Prese: 0", this);
-    mazzoScopeLabel = new QLabel("Scope: 0", this);
-    statsLayout->addWidget(mazzoPreseLabel);
-    statsLayout->addWidget(mazzoScopeLabel);
+    mazzoPreseIcon = new QLabel();
+    mazzoPreseText = new QLabel("Prese: 0", this);
+    mazzoScopeIcon = new QLabel();
+    mazzoScopeText = new QLabel("Scope: 0", this);
+
+    statsLayout->addWidget(mazzoScopeIcon);
+    statsLayout->addWidget(mazzoScopeText);
+    statsLayout->addWidget(mazzoPreseIcon);
+    statsLayout->addWidget(mazzoPreseText);
+
     // B. Zona Carte (Il trucco qui)
     QWidget *cardsWrapper = new QWidget(); // Questo serve solo per lo stile
     cardsWrapper->setStyleSheet("QWidget { border: 2px solid #16a9ac; border-radius: 8px; }");
@@ -757,33 +763,17 @@ void Cirulla::makeMove(int handIndex, QList<int> &tableIndices)
         {
             outputArea->append("SCOPA!");
             giocatore.scope.append(giocata); // La carta che ha fatto scopa va nelle scope
-            if (state.currentTurnIndex == 0)
+            if (state.currentTurnIndex == 2)
             {
-                mazzoScopeP0Label->setText(QString("Scope: %1").arg(giocatore.scope.size()));
-            }
-            if (state.currentTurnIndex == 1)
-            {
-                mazzoScopeP1Label->setText(QString("Scope: %1").arg(giocatore.scope.size()));
-            }
-            if (state.currentTurnIndex == 3)
-            {
-                mazzoScopeP3Label->setText(QString("Scope: %1").arg(giocatore.scope.size()));
+                aggiornaMazzoScope(giocatore, giocata);
             }
         }
         else
         {
             giocatore.prese.append(giocata); // La carta che ha preso va nelle prese
-            if (state.currentTurnIndex == 0)
+            if (state.currentTurnIndex == 2)
             {
-                mazzoPreseP0Label->setText(QString("Prese: %1").arg(giocatore.prese.size()));
-            }
-            if (state.currentTurnIndex == 1)
-            {
-                mazzoPreseP1Label->setText(QString("Prese: %1").arg(giocatore.prese.size()));
-            }
-            if (state.currentTurnIndex == 3)
-            {
-                mazzoPreseP3Label->setText(QString("Prese: %1").arg(giocatore.prese.size()));
+                aggiornaMazzoPrese(giocatore);
             }
         }
 
@@ -791,6 +781,10 @@ void Cirulla::makeMove(int handIndex, QList<int> &tableIndices)
         for (int idx : tableIndices)
         {
             giocatore.prese.append(state.tableCards[idx]);
+            if (state.currentTurnIndex == 2)
+            {
+                aggiornaMazzoPrese(giocatore);
+            }
         }
 
         // Rimuovi le carte dal tavolo
@@ -798,6 +792,22 @@ void Cirulla::makeMove(int handIndex, QList<int> &tableIndices)
         {
             state.tableCards.removeAt(i);
         }
+    }
+
+    if (state.currentTurnIndex == 0)
+    {
+        mazzoPreseP0Label->setText(QString("Prese: %1").arg(giocatore.prese.size()));
+        mazzoScopeP0Label->setText(QString("Scope: %1").arg(giocatore.scope.size()));
+    }
+    if (state.currentTurnIndex == 1)
+    {
+        mazzoPreseP1Label->setText(QString("Prese: %1").arg(giocatore.prese.size()));
+        mazzoScopeP1Label->setText(QString("Scope: %1").arg(giocatore.scope.size()));
+    }
+    if (state.currentTurnIndex == 3)
+    {
+        mazzoPreseP3Label->setText(QString("Prese: %1").arg(giocatore.prese.size()));
+        mazzoScopeP3Label->setText(QString("Scope: %1").arg(giocatore.scope.size()));
     }
 
     // Rimuovi la carta dalla mano del giocatore
@@ -1153,8 +1163,8 @@ void Cirulla::updatePlayerUI(int playerIndex)
         if (p.type == SeatType::Human)
         {
             renderHandToLayout(p, targetLayout);
-            mazzoPreseLabel->setText("Prese: " + QString::number(p.prese.size()));
-            mazzoScopeLabel->setText("Scope: " + QString::number(p.scope.size()));
+            // mazzoPreseLabel->setText("Prese: " + QString::number(p.prese.size()));
+            // mazzoScopeLabel->setText("Scope: " + QString::number(p.scope.size()));
         }
         else
         {
@@ -1191,6 +1201,38 @@ void Cirulla::dealNextRound()
 
 void Cirulla::handleEndOfGame()
 {
+    outputArea->append("Le carte rimaste sul tavolo vanno all'ultimo giocatore che ha preso");
+
+    PlayerState &ultimoAPrendere = state.seats[lastPlayerToScore];
+
+    for (auto &card : state.tableCards)
+    {
+        ultimoAPrendere.prese.append(card);
+    }
+
+    state.tableCards.clear();
+
+    showTable();
+}
+
+void Cirulla::aggiornaMazzoPrese(PlayerState &p)
+{
+    outputArea->append("aggiunta carta a mazzo prese");
+
+    QPixmap retro("cards/back-teal.png");
+    mazzoPreseIcon->setPixmap(retro.scaled(50, 75, Qt::KeepAspectRatio));
+    mazzoPreseText->setText("Prese: " + QString::number(p.prese.size()));
+}
+
+void Cirulla::aggiornaMazzoScope(PlayerState &p, Carta &c)
+{
+    outputArea->append("aggiunta carta a mazzo scope");
+
+    QString cartaIconPath = QString("cards/%1.png").arg(c.id + 1);
+
+    QPixmap cartaIcon(cartaIconPath);
+    mazzoScopeIcon->setPixmap(cartaIcon.scaled(50, 75, Qt::KeepAspectRatio));
+    mazzoScopeText->setText("Scope: " + QString::number(p.scope.size()));
 }
 
 Cirulla::~Cirulla()

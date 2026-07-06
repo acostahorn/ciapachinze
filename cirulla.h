@@ -125,8 +125,12 @@ private:
     QWidget *p2StatsContainer;
 
     // --- main player taken and scope labels
-    QLabel *mazzoPreseLabel;
-    QLabel *mazzoScopeLabel;
+
+    QLabel *mazzoPreseIcon;
+    QLabel *mazzoPreseText;
+
+    QLabel *mazzoScopeIcon;
+    QLabel *mazzoScopeText;
 
     // Assuming player containers are widgets (e.g., QFrame or QGroupBox)
     QWidget *player0Container;
@@ -176,7 +180,8 @@ private:
     void makeMove(int handIndex, QList<int> &tableIndices);
     int numeroAssiInTavola() const;
     void updatePlayerUI(int playerIndex);
-
+    void aggiornaMazzoPrese(PlayerState &p);
+    void aggiornaMazzoScope(PlayerState &p, Carta &c);
     QVector<Mossa> possibiliPrese(int handIndex);
     QVector<Mossa> trovaTutteLePrese(int handIndex);
 
