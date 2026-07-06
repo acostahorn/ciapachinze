@@ -58,6 +58,7 @@ struct Mossa
 {
     int handIndex;
     QList<int> tableIndices;
+    int ranking;
 };
 
 struct PlayerState
@@ -121,25 +122,36 @@ private:
     QGroupBox *tableContainer;
     QGroupBox *handContainer;
 
+    QWidget *p2StatsContainer;
+
     // --- main player taken and scope labels
     QLabel *mazzoPreseLabel;
     QLabel *mazzoScopeLabel;
 
     // Assuming player containers are widgets (e.g., QFrame or QGroupBox)
     QWidget *player0Container;
+    QWidget *p0StatsContainer;
+    QLabel *mazzoPreseP0Label;
+    QLabel *mazzoScopeP0Label;
+
     QWidget *player1Container;
     QWidget *player3Container;
+    QLabel *mazzoPreseP1Label; // Giocatore destra
+    QLabel *mazzoScopeP1Label;
+    QLabel *mazzoPreseP3Label; // Giocatore sinistra
+    QLabel *mazzoScopeP3Label;
 
     int selectedHandCardIndex = -1;     // -1 means no selected card in hand
     QList<int> selectedTableIndices;    // index of selected cards from the table
     bool isSelectingTableCards = false; // Abilita/disabilita selezione sul tavolo
+    int revealedCardIndex = -1;
+    int lastPlayerToScore = -1;
 
     QVector<Carta> generateShuffledDeck();
 
-    void setupPlayerDashboard(QWidget *container, Qt::Orientation orientation);
-
     void setupGame();
     void initialDeal();
+    void dealNextRound();
     void showTable();
     void renderHandToLayout(const PlayerState &p, QLayout *targetLayout);
     void showHands();
@@ -154,15 +166,23 @@ private:
     void processTurn();
     bool eventFilter(QObject *obj, QEvent *event);
     void playCard(int handIndex, QList<int> &tableIndices);
+
+    bool isCurrentPlayerBot() const;
     void botPlay();
+    void executeBotMove(const Mossa &m);
+
     void resetSelection();
     void validateAndPlay();
     void makeMove(int handIndex, QList<int> &tableIndices);
     int numeroAssiInTavola() const;
+    void updatePlayerUI(int playerIndex);
 
     QVector<Mossa> possibiliPrese(int handIndex);
-    QVector<Mossa> trovaPresePerSomma(int handIndex);
-    QVector<Mossa> trovaPresePer15(int handIndex);
+    QVector<Mossa> trovaTutteLePrese(int handIndex);
+
+    int calcolaValoreTattico(const Mossa &m);
+
+    void handleEndOfGame();
 };
 
 #endif // CIRULLA_H

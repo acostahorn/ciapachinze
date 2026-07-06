@@ -4,7 +4,6 @@
 #include <QFont>
 #include <QMessageBox>
 #include <iostream>
-#include <QDebug>
 #include <QTextEdit>
 #include <array>
 #include <numeric>
@@ -23,25 +22,31 @@
 Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
 {
 
-    this->setMinimumSize(800, 600);
-    this->resize(1000, 800);
+    this->setMinimumSize(1000, 900);
+    this->resize(1000, 900);
 
     // 1. INITIALIZE ALL CONTAINERS
     // Top Player (centered)
     player0Container = new QWidget(this);
+    p0StatsContainer = new QWidget(this);
+
     QHBoxLayout *player0Layout = new QHBoxLayout(player0Container);
     player0Layout->setAlignment(Qt::AlignCenter);
     player0Container->setMinimumSize(100, 150);
 
     // Side Players
 
+    // Per il Giocatore 1
     player1Container = new QWidget(this);
-    setupPlayerDashboard(player1Container, Qt::Vertical);
+    QVBoxLayout *layout1 = new QVBoxLayout(player1Container); // Questo è NECESSARIO per evitare crash
+    layout1->setContentsMargins(5, 5, 5, 5);
+    player1Container->setMinimumSize(100, 400);
 
+    // Per il Giocatore 3
     player3Container = new QWidget(this);
-    setupPlayerDashboard(player3Container, Qt::Vertical);
-    player1Container->setMinimumSize(100, 300);
-    player3Container->setMinimumSize(100, 300);
+    QVBoxLayout *layout3 = new QVBoxLayout(player3Container); // Questo è NECESSARIO per evitare crash
+    layout3->setContentsMargins(5, 5, 5, 5);
+    player3Container->setMinimumSize(100, 400);
 
     // Apply size policies for all
     auto setContainerStyle = [](QWidget *container)
@@ -61,59 +66,132 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
     outputArea->setMaximumHeight(90);
     mainLayout->addWidget(outputArea);
 
+    QWidget *gameArea = new QWidget(this);
+    QVBoxLayout *gameLayout = new QVBoxLayout(gameArea);
+    gameLayout->setContentsMargins(0, 0, 0, 0); // Nessun margine extra
+
     // 4. Top Row (Player 0 centered)
-    mainLayout->addWidget(player0Container);
+    // 1. Il contenitore delle statistiche
+    p0StatsContainer = new QWidget(this);
+
+    QVBoxLayout *statsLayoutP0 = new QVBoxLayout(p0StatsContainer); // Assegnato qui!
+
+    mazzoPreseP0Label = new QLabel("Prese: 0", this);
+    mazzoScopeP0Label = new QLabel("Scope: 0", this);
+    // 2. Aggiungi le label al layout del contenitore
+    statsLayoutP0->addWidget(mazzoPreseP0Label);
+    statsLayoutP0->addWidget(mazzoScopeP0Label);
+
+    // 3. Ora p0StatsContainer è "pieno" di statistiche.
+    // Possiamo metterlo nel Grid insieme al contenitore delle carte (player0Container)
+    QGridLayout *middleTopGrid = new QGridLayout();
+    QWidget *p0Wrapper = new QWidget(this);
+    p0Wrapper->setStyleSheet("QWidget { border: 2px solid #16a9ac; border-radius: 8px; }");
+    QHBoxLayout *wrapper0Layout = new QHBoxLayout(p0Wrapper);
+    wrapper0Layout->setContentsMargins(5, 5, 5, 5);
+    p0StatsContainer->setFixedWidth(100);
+    // player0Container->setFixedHeight(200);
+
+    wrapper0Layout->addWidget(p0StatsContainer);
+    wrapper0Layout->addWidget(player0Container);
+    middleTopGrid->addWidget(p0Wrapper, 0, 0);
+
+    gameLayout->addLayout(middleTopGrid, 1);
 
     // 5. Middle Zone (Using GridLayout for better table control)
     QGridLayout *middleGrid = new QGridLayout();
 
+    mazzoPreseP3Label = new QLabel("Prese: 0", this);
+    mazzoScopeP3Label = new QLabel("Scope: 0", this);
+    layout3->addWidget(mazzoPreseP3Label);
+    layout3->addWidget(mazzoScopeP3Label);
+
+    mazzoPreseP1Label = new QLabel("Prese: 0", this);
+    mazzoScopeP1Label = new QLabel("Scope: 0", this);
+
+    middleGrid->setColumnStretch(0, 1);
+    middleGrid->setColumnStretch(1, 1);
+    middleGrid->setColumnStretch(2, 10); // Il tavolo domina
+    middleGrid->setColumnStretch(3, 1);
+    middleGrid->setColumnStretch(4, 1);
+
+    middleGrid->addWidget(mazzoPreseP1Label, 0, 0);
+    middleGrid->addWidget(mazzoScopeP1Label, 1, 0);
+    middleGrid->addWidget(mazzoPreseP3Label, 0, 4);
+    middleGrid->addWidget(mazzoScopeP3Label, 1, 4);
+
+    player1Container->setFixedWidth(100); // Scegli una misura che ti piace
+    player3Container->setFixedWidth(100);
+
     // Add side players to the sides
-    middleGrid->addWidget(player3Container, 0, 0); // Left
-    middleGrid->addWidget(player1Container, 0, 2); // Right
+    middleGrid->addWidget(player3Container, 0, 1); // Left
+    middleGrid->addWidget(player1Container, 0, 3); // Right
 
     // Table
-    QGroupBox *tableContainer = new QGroupBox("CARTE IN TAVOLO", this);
+    QGroupBox *tableContainer = new QGroupBox();
+    tableContainer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    // Forza il widget a ignorare le dimensioni minime calcolate dai figli
+    tableContainer->setMinimumSize(0, 0);
     tableContainer->setStyleSheet(
         "QGroupBox { background-color: #1e6b36; border: 2px solid #144d26; border-radius: 8px; margin-top: 12px; font-weight: bold; color: #ffffff; }"
         "QGroupBox::title { subcontrol-origin: margin; subcontrol-position: top left; padding: 0 5px; color: #2c3e50; }");
     tableLayout = new QGridLayout(tableContainer);
     tableLayout->setAlignment(Qt::AlignCenter);
+    tableContainer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
     // Add table to center column and make it stretch
-    middleGrid->addWidget(tableContainer, 0, 1, 1, 1);
+    middleGrid->addWidget(tableContainer, 0, 2, 1, 1);
     middleGrid->setColumnStretch(1, 5); // Table gets 5x the width of side columns
 
-    mainLayout->addLayout(middleGrid);
+    gameLayout->addLayout(middleGrid, 5);
+    middleGrid->setRowStretch(0, 10);
 
     // 6. Bottom Zone (Your hand)
-    QGroupBox *handContainer = new QGroupBox("LA TUA MANO", this);
-    handContainer->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
-    handContainer->setStyleSheet("QGroupBox { font-weight: bold; color: #27ae60; }");
+    p2StatsContainer = new QWidget(this);
 
-    // Layout principale dentro il GroupBox
+    QGroupBox *handContainer = new QGroupBox("LA TUA MANO", this);
+    handContainer->setStyleSheet(
+        "QGroupBox { "
+        "   border: 2px solid #16a9ac; " // Stesso bordo degli altri
+        "   border-radius: 8px; "
+        "   margin-top: 10px; " // Spazio per il titolo
+        "   font-weight: bold; "
+        "   color: #27ae60; "
+        "} "
+        "QGroupBox::title { "
+        "   subcontrol-origin: margin; "
+        "   subcontrol-position: top center; " // Titolo centrato
+        "   padding: 0 5px; "
+        "}");
+
+    handContainer->setStyleSheet("QGroupBox { font-weight: bold; color: #27ae60; }");
     QHBoxLayout *handZoneLayout = new QHBoxLayout(handContainer);
 
-    // A. Zona Statistiche (a sinistra)
-    QVBoxLayout *statsLayout = new QVBoxLayout();
+    // A. Zona Statistiche
+    // Se p0StatsContainer è il nome del widget che le tue funzioni si aspettano, usa quello
+    p2StatsContainer->setStyleSheet("QWidget { border: 2px solid #16a9ac; border-radius: 8px; }");
+    p2StatsContainer->setFixedWidth(100);
+    QVBoxLayout *statsLayout = new QVBoxLayout(p2StatsContainer);
+
     mazzoPreseLabel = new QLabel("Prese: 0", this);
     mazzoScopeLabel = new QLabel("Scope: 0", this);
     statsLayout->addWidget(mazzoPreseLabel);
     statsLayout->addWidget(mazzoScopeLabel);
-    statsLayout->setAlignment(Qt::AlignCenter); // Opzionale, per centrare i testi
+    // B. Zona Carte (Il trucco qui)
+    QWidget *cardsWrapper = new QWidget(); // Questo serve solo per lo stile
+    cardsWrapper->setStyleSheet("QWidget { border: 2px solid #16a9ac; border-radius: 8px; }");
 
-    // B. Zona Carte (a destra)
-    // NON crearlo con 'handContainer' come genitore, perché lo aggiungeremo al layout
-    handLayout = new QHBoxLayout();
+    // cardsWrapper->setFixedHeight(200);
+    // Creiamo l'handLayout dentro il wrapper, così le funzioni lo trovano
+    handLayout = new QHBoxLayout(cardsWrapper);
     handLayout->setAlignment(Qt::AlignCenter);
 
-    // C. Assemblaggio
-    handZoneLayout->addLayout(statsLayout); // Aggiunge le stats
-    handZoneLayout->addStretch();
-    handZoneLayout->addLayout(handLayout); // Aggiunge le carte
-    handZoneLayout->addStretch();
+    // C. Assemblaggio finale
+    handZoneLayout->addWidget(p2StatsContainer);
+    handZoneLayout->addWidget(cardsWrapper); // Aggiungiamo il wrapper, non handLayout!
 
-    // Infine, aggiungi il contenitore al layout principale della finestra
-    mainLayout->addWidget(handContainer);
+    gameLayout->addWidget(handContainer, 2);
+    mainLayout->addWidget(gameArea, 1);
 
     // 7. Initialization
     setupGame();
@@ -303,15 +381,17 @@ void Cirulla::renderHandToLayout(const PlayerState &p, QLayout *targetLayout)
     {
         const Carta &card = p.hand[i];
         QLabel *cardLabel = new QLabel(); // No parent needed here, layout takes ownership
+        cardLabel->setStyleSheet("border: none");
         cardLabel->installEventFilter(this);
         bool isMe = (p.id == config.humanSeatIndex);
+        bool isRevealed = (p.id == state.currentTurnIndex && i == revealedCardIndex);
 
         cardLabel->setProperty("cardIndex", i);
         cardLabel->setProperty("type", "hand");
         cardLabel->setProperty("isClickable", isMe);
 
         QString path;
-        if (isMe)
+        if (isMe || isRevealed)
         {
             // Show the actual card
             path = QString("cards/%1.png").arg(card.id + 1);
@@ -321,7 +401,7 @@ void Cirulla::renderHandToLayout(const PlayerState &p, QLayout *targetLayout)
             }
             else
             {
-                cardLabel->setStyleSheet("");
+                cardLabel->setStyleSheet("border: none");
             }
         }
         else
@@ -482,22 +562,6 @@ bool Cirulla::all_cards_same(const QVector<Carta> &carte)
     return true;
 }
 
-void Cirulla::setupPlayerDashboard(QWidget *container, Qt::Orientation orientation)
-{
-    QVBoxLayout *layout = new QVBoxLayout(container);
-    layout->setContentsMargins(5, 5, 5, 5);
-
-    // Area "Prese" (es. una Label per il numero e una per l'icona)
-    QLabel *preseLabel = new QLabel("Prese: 0", container);
-    preseLabel->setAlignment(Qt::AlignCenter);
-
-    // Area "Mano" (un piccolo layout dedicato per le carte coperte)
-    QHBoxLayout *handArea = new QHBoxLayout();
-
-    layout->addWidget(preseLabel);
-    layout->addLayout(handArea);
-}
-
 void Cirulla::processTurn()
 {
     // 1. Identifichiamo il giocatore corrente
@@ -619,58 +683,177 @@ bool Cirulla::eventFilter(QObject *obj, QEvent *event)
 
 void Cirulla::playCard(int handIndex, QList<int> &tableIndices)
 {
+    int indexGiocatoreCheMuove = state.currentTurnIndex;
+    // 1. Esegui la mossa (questo usa state.currentTurnIndex, quindi è già corretto)
     makeMove(handIndex, tableIndices);
+
+    // 2. Disabilita interazione durante l'animazione
     enableHandInteraction(false);
-
-    const PlayerState &me = state.seats[config.humanSeatIndex];
-    renderHandToLayout(me, handLayout);
-
-    state.currentTurnIndex = (state.currentTurnIndex + 1) % state.seats.size();
     selectedHandCardIndex = -1;
     selectedTableIndices.clear();
+    updatePlayerUI(indexGiocatoreCheMuove);
 
-    showTable();
+    bool tuttiHannoFinito = true;
+    for (const auto &player : state.seats)
+    {
+        if (!player.hand.isEmpty())
+        {
+            tuttiHannoFinito = false;
+            break;
+        }
+    }
 
-    // Aggiorna le statistiche (Prese/Scope)
-    // showStats();
+    if (tuttiHannoFinito)
+    {
+        if (state.deckIndex < state.deck.size())
+        {
+            dealNextRound();
+            state.currentTurnIndex = (state.dealerIndex + 1) % state.seats.size();
+            for (int i = 0; i < state.seats.size(); ++i)
+            {
+                updatePlayerUI(i);
+            }
+        }
+        else
+        {
+            handleEndOfGame();
+            return;
+        }
+    }
+    else
+    {
+        state.currentTurnIndex = (state.currentTurnIndex + 1) % state.seats.size();
+    }
+    //  Prossima mossa
+    if (isCurrentPlayerBot())
+    {
+        enableHandInteraction(false);
+        QTimer::singleShot(1000, this, &Cirulla::botPlay);
+    }
+    else
+    {
+        enableHandInteraction(true);
+    }
 }
 
 void Cirulla::makeMove(int handIndex, QList<int> &tableIndices)
 {
     PlayerState &giocatore = state.seats[state.currentTurnIndex];
     Carta giocata = giocatore.hand[handIndex];
-    std::sort(tableIndices.begin(), tableIndices.end(), std::greater<int>());
 
-    bool isScopa = (state.tableCards.size() == tableIndices.size());
-    if (isScopa)
+    if (tableIndices.isEmpty())
     {
-        outputArea->append("SCOPA!");
-        giocatore.scope.append(giocata);
-        for (int idx : tableIndices)
-        {
-            giocatore.prese.append(state.tableCards[idx]);
-        }
+        // CASO SCARTO: La carta finisce sul tavolo
+        state.tableCards.append(giocata);
     }
     else
     {
-        giocatore.prese.append(giocata);
+        // CASO PRESA O SCOPA
+        lastPlayerToScore = state.currentTurnIndex;
+        std::sort(tableIndices.begin(), tableIndices.end(), std::greater<int>());
+        bool isScopa = (state.tableCards.size() == tableIndices.size());
+
+        if (isScopa)
+        {
+            outputArea->append("SCOPA!");
+            giocatore.scope.append(giocata); // La carta che ha fatto scopa va nelle scope
+            if (state.currentTurnIndex == 0)
+            {
+                mazzoScopeP0Label->setText(QString("Scope: %1").arg(giocatore.scope.size()));
+            }
+            if (state.currentTurnIndex == 1)
+            {
+                mazzoScopeP1Label->setText(QString("Scope: %1").arg(giocatore.scope.size()));
+            }
+            if (state.currentTurnIndex == 3)
+            {
+                mazzoScopeP3Label->setText(QString("Scope: %1").arg(giocatore.scope.size()));
+            }
+        }
+        else
+        {
+            giocatore.prese.append(giocata); // La carta che ha preso va nelle prese
+            if (state.currentTurnIndex == 0)
+            {
+                mazzoPreseP0Label->setText(QString("Prese: %1").arg(giocatore.prese.size()));
+            }
+            if (state.currentTurnIndex == 1)
+            {
+                mazzoPreseP1Label->setText(QString("Prese: %1").arg(giocatore.prese.size()));
+            }
+            if (state.currentTurnIndex == 3)
+            {
+                mazzoPreseP3Label->setText(QString("Prese: %1").arg(giocatore.prese.size()));
+            }
+        }
+
+        // Aggiungi le carte del tavolo alle prese
         for (int idx : tableIndices)
         {
             giocatore.prese.append(state.tableCards[idx]);
         }
-    }
-    for (int i : tableIndices)
-    {
-        state.tableCards.removeAt(i);
+
+        // Rimuovi le carte dal tavolo
+        for (int i : tableIndices)
+        {
+            state.tableCards.removeAt(i);
+        }
     }
 
+    // Rimuovi la carta dalla mano del giocatore
     giocatore.hand.removeAt(handIndex);
-    mazzoPreseLabel->setText("Prese: " + QString::number(giocatore.prese.size()));
-    mazzoScopeLabel->setText("Scope: " + QString::number(giocatore.scope.size()));
 }
 
 void Cirulla::botPlay()
 {
+    PlayerState &bot = state.seats[state.currentTurnIndex];
+    QVector<Mossa> mosseValide;
+
+    // 1. Cerchiamo prese
+    for (int i = 0; i < bot.hand.size(); ++i)
+    {
+        QVector<Mossa> prese = trovaTutteLePrese(i);
+        if (prese.isEmpty())
+        {
+            // Se non ci sono prese, aggiungiamo una mossa di "scarto"
+            Mossa scarto;
+            scarto.handIndex = i;
+            scarto.tableIndices = {};
+            mosseValide.append(scarto);
+        }
+        else
+        {
+            mosseValide.append(prese);
+        }
+    }
+
+    // 2. Valutiamo le mosse
+    for (auto &m : mosseValide)
+    {
+        m.ranking = calcolaValoreTattico(m);
+
+        // --- LOGICA ANTI-AUTOLESIONISMO ---
+        // Se è una mossa di scarto (tableIndices vuoto) e gioco un Asso...
+        Carta c = bot.hand[m.handIndex];
+        if (m.tableIndices.isEmpty() && c.faceValue == 1)
+        {
+            // ...e ho altre carte in mano...
+            if (bot.hand.size() > 1)
+            {
+                // ...abbasso drasticamente il ranking per evitare che venga scelta
+                m.ranking = -999;
+            }
+        }
+    }
+
+    // 3. Esecuzione
+    if (!mosseValide.isEmpty())
+    {
+        auto bestMossa = std::max_element(mosseValide.begin(), mosseValide.end(),
+                                          [](const Mossa &a, const Mossa &b)
+                                          { return a.ranking < b.ranking; });
+        executeBotMove(*bestMossa);
+    }
 }
 
 void Cirulla::resetSelection()
@@ -746,13 +929,32 @@ void Cirulla::keyPressEvent(QKeyEvent *event)
 {
     if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter)
     {
-        if (selectedHandCardIndex != -1 && !selectedTableIndices.isEmpty())
+        if (selectedHandCardIndex != -1)
         {
-            validateAndPlay();
+            // Caso 1: Hai selezionato una presa
+            if (!selectedTableIndices.isEmpty())
+            {
+                validateAndPlay();
+            }
+            // Caso 2: Vuoi scartare
+            else
+            {
+                // Qui dobbiamo verificare se lo scarto è LEGALE
+                // (ovvero se davvero non puoi prendere nulla)
+                if (trovaTutteLePrese(selectedHandCardIndex).isEmpty())
+                {
+                    // Nessuna presa possibile per questa carta, lo scarto è legale!
+                    playCard(selectedHandCardIndex, selectedTableIndices);
+                }
+                else
+                {
+                    outputArea->append("Hai delle prese disponibili, non puoi scartare!");
+                }
+            }
         }
         else
         {
-            qDebug() << "Seleziona prima una carta in mano e una sul tavolo!";
+            outputArea->append("Seleziona prima una carta in mano!");
         }
     }
     else
@@ -779,70 +981,73 @@ QVector<Mossa> Cirulla::possibiliPrese(int handIndex)
 
     int valoreCartaInMano = giocatore.hand[handIndex].faceValue;
 
-    candidati.append(trovaPresePerSomma(handIndex));
-    candidati.append(trovaPresePer15(handIndex));
+    candidati.append(trovaTutteLePrese(handIndex));
 
     return candidati;
 }
-
-QVector<Mossa> Cirulla::trovaPresePerSomma(int handIndex)
+QVector<Mossa> Cirulla::trovaTutteLePrese(int handIndex)
 {
     PlayerState &giocatore = state.seats[state.currentTurnIndex];
-    int valoreCartaInMano = giocatore.hand[handIndex].faceValue;
+    Carta c = giocatore.hand[handIndex];
+    bool isMatta = c.isMatta();
+    int valore = c.faceValue;
+
     QVector<Mossa> prese;
     int n = state.tableCards.size();
 
+    // AGGIUNTA: Se il tavolo è vuoto, nessuna carta può fare presa!
+    if (n == 0)
+    {
+        return QVector<Mossa>();
+    }
+
+    if (valore == 1 && numeroAssiInTavola() == 0)
+    {
+
+        QList<int> tuttoIlTavolo;
+        for (int j = 0; j < n; ++j)
+        {
+            tuttoIlTavolo.append(j);
+        }
+        // Aggiungiamo la mossa "Presa Totale"
+        prese.append({handIndex, tuttoIlTavolo});
+        return prese;
+    }
+
+    // Iteriamo su tutte le combinazioni possibili (Power Set)
     for (int i = 1; i < (1 << n); ++i)
     {
-        int somma = 0;
+        int sommaTavolo = 0;
         QList<int> combo;
-
         for (int j = 0; j < n; ++j)
         {
             if ((i >> j) & 1)
             {
-                somma += state.tableCards[j].faceValue;
+                sommaTavolo += state.tableCards[j].faceValue;
                 combo.append(j);
             }
         }
 
-        if (somma == valoreCartaInMano)
+        // LOGICA UNIFICATA
+        if (isMatta)
         {
-            prese.append({handIndex, combo});
-        }
-    }
-
-    return prese;
-}
-
-QVector<Mossa> Cirulla::trovaPresePer15(int handIndex)
-{
-    PlayerState &giocatore = state.seats[state.currentTurnIndex];
-    int valoreCartaInMano = giocatore.hand[handIndex].faceValue;
-    QVector<Mossa> prese;
-
-    int n = state.tableCards.size();
-
-    for (int i = 1; i < (1 << n); ++i)
-    {
-        int somma = 0;
-        QList<int> combo;
-
-        for (int j = 0; j < n; ++j)
-        {
-            if ((i >> j) & 1)
+            // La matta prende se sommaTavolo è un valore che lei può "coprire"
+            // Caso 1: Presa normale (sommaTavolo tra 1 e 10)
+            // Caso 2: Presa 15 (sommaTavolo tra 5 e 14, perché 15 - [1..10] = [14..5])
+            if (sommaTavolo >= 1 && sommaTavolo <= 14)
             {
-                somma += state.tableCards[j].faceValue;
-                combo.append(j);
+                prese.append({handIndex, combo});
             }
         }
-
-        if (somma + valoreCartaInMano == 15)
+        else
         {
-            prese.append({handIndex, combo});
+            // Logica per carte normali
+            if (sommaTavolo == valore || (sommaTavolo + valore == 15))
+            {
+                prese.append({handIndex, combo});
+            }
         }
     }
-
     return prese;
 }
 
@@ -851,6 +1056,141 @@ int Cirulla::numeroAssiInTavola() const
     return (std::count_if(state.tableCards.begin(), state.tableCards.end(),
                           [](const Carta &c)
                           { return c.faceValue == 1; }));
+}
+
+int Cirulla::calcolaValoreTattico(const Mossa &m)
+{
+    int rank = 0;
+
+    // 1. PRIORITÀ MASSIMA: SCOPA
+    if (m.tableIndices.size() == state.tableCards.size())
+    {
+        rank += 1000;
+    }
+
+    // 2. PRIORITÀ ALTA: STRATEGIA DENARI (Grande, Piccola, Settebello)
+    for (int index : m.tableIndices)
+    {
+        const Carta &c = state.tableCards[index];
+        if (c.seme == Seme::Denari)
+        {
+            // La Grande (K, Q, J)
+            if (c.faceValue >= 11 && c.faceValue <= 13)
+                rank += 500;
+            // La Piccola (A, 2, 3)
+            else if (c.faceValue >= 1 && c.faceValue <= 3)
+                rank += 300;
+            // Settebello
+            else if (c.faceValue == 7)
+                rank += 100;
+        }
+
+        // 3. PRIORITÀ MEDIA: VALORE PRIMIERA
+        // I 7 valgono 21, i 6 valgono 18, gli Assi 16
+        if (c.faceValue == 7)
+            rank += 40;
+        else if (c.faceValue == 6)
+            rank += 30;
+        else if (c.faceValue == 1)
+            rank += 25;
+    }
+
+    return rank;
+}
+
+bool Cirulla::isCurrentPlayerBot() const
+{
+    // Controlliamo il tipo del giocatore di turno
+    return state.seats[state.currentTurnIndex].type == SeatType::Bot;
+}
+
+void Cirulla::executeBotMove(const Mossa &m)
+{
+    revealedCardIndex = m.handIndex;
+    showHands();
+
+    QTimer::singleShot(1000, this, [=]()
+                       {
+        // Ora esegui la mossa vera e propria
+        this->playCard(m.handIndex, const_cast<QList<int>&>(m.tableIndices)); 
+    revealedCardIndex = -1; });
+}
+
+void Cirulla::updatePlayerUI(int playerIndex)
+{
+    // 1. Aggiorniamo sempre il tavolo (visibile a tutti)
+    showTable();
+
+    revealedCardIndex = -1;
+
+    // 2. Recuperiamo il giocatore che ha appena mosso
+    const PlayerState &p = state.seats[playerIndex];
+
+    // 3. Identifichiamo quale layout dobbiamo aggiornare
+    QLayout *targetLayout = nullptr;
+
+    // Usiamo una logica simile a showHands per capire dove si trova il giocatore
+    int seat = getLocalSeat(p.id, config.humanSeatIndex, state.seats.size());
+    switch (seat)
+    {
+    case 0:
+        targetLayout = handLayout;
+        break;
+    case 1:
+        targetLayout = player1Container->layout();
+        break;
+    case 2:
+        targetLayout = player0Container->layout();
+        break;
+    case 3:
+        targetLayout = player3Container->layout();
+        break;
+    }
+
+    if (targetLayout)
+    {
+        // Se è l'umano, aggiorniamo normalmente
+        if (p.type == SeatType::Human)
+        {
+            renderHandToLayout(p, targetLayout);
+            mazzoPreseLabel->setText("Prese: " + QString::number(p.prese.size()));
+            mazzoScopeLabel->setText("Scope: " + QString::number(p.scope.size()));
+        }
+        else
+        {
+            // SE È UN BOT: aggiorniamo il layout MA manteniamo il retro della carta
+            // Basta richiamare renderHandToLayout: è già scritta per gestire il caso "isMe = false"
+            // e mostrare "cards/back-teal.png".
+            renderHandToLayout(p, targetLayout);
+        }
+    }
+}
+
+void Cirulla::dealNextRound()
+{
+    outputArea->append(QString("indice delle carte: %1").arg(state.deckIndex));
+    // Distribuisci 3 carte a ciascuno
+    for (auto &player : state.seats)
+    {
+        for (int i = 0; i < 3; ++i)
+        {
+            if (state.deckIndex < state.deck.size())
+            {
+                player.hand.append(state.deck[state.deckIndex++]);
+            }
+        }
+    }
+    // Nota: NON puliamo le prese e le scope qui!
+
+    // Aggiorniamo l'interfaccia per mostrare le nuove carte
+    for (int i = 0; i < state.seats.size(); ++i)
+    {
+        updatePlayerUI(i);
+    }
+}
+
+void Cirulla::handleEndOfGame()
+{
 }
 
 Cirulla::~Cirulla()
