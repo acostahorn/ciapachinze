@@ -168,7 +168,7 @@ private:
     int lastPlayerToScore = -1;
 
     // TEST SWITCH
-    bool isTestMode = true;
+    bool isTestMode = false;
 
     QVector<Carta> generateShuffledDeck();
     QVector<Carta> generateTestDeck();

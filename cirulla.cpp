@@ -22,8 +22,7 @@
 Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
 {
 
-    this->setMinimumSize(1000, 900);
-    this->resize(1000, 900);
+    this->setFixedSize(1200, 900);
 
     // 1. INITIALIZE ALL CONTAINERS
     // Top Player (centered)
@@ -63,7 +62,7 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
     // 3. Output Area (Separate, full-width row)
     outputArea = new QTextEdit(this);
     outputArea->setReadOnly(true);
-    outputArea->setMaximumHeight(40);
+    outputArea->setMaximumHeight(100);
     mainLayout->addWidget(outputArea);
 
     QWidget *gameArea = new QWidget(this);
@@ -93,14 +92,16 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
     p0Wrapper->setStyleSheet("QWidget { border: 2px solid #16a9ac; border-radius: 8px; }");
     QHBoxLayout *wrapper0Layout = new QHBoxLayout(p0Wrapper);
     wrapper0Layout->setContentsMargins(5, 5, 5, 5);
+    wrapper0Layout->setSpacing(10);
     p0StatsContainer->setFixedWidth(120);
     p0StatsContainer->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
 
+    p0Wrapper->setFixedWidth(800);
     // player0Container->setFixedHeight(200);
 
     wrapper0Layout->addWidget(p0StatsContainer);
     wrapper0Layout->addWidget(player0Container);
-    middleTopGrid->addWidget(p0Wrapper, 0, 0);
+    middleTopGrid->addWidget(p0Wrapper, 0, 0, Qt::AlignCenter);
 
     gameLayout->addLayout(middleTopGrid, 1);
 
@@ -147,20 +148,32 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
     middleGrid->addWidget(mazzoPreseP3Text, 3, 4);
 
     player1Container->setFixedWidth(100); // Scegli una misura che ti piace
+    mazzoScopeP1Icon->setFixedWidth(50);
+    mazzoScopeP1Text->setFixedWidth(50);
     player3Container->setFixedWidth(100);
+    mazzoScopeP3Icon->setFixedWidth(50);
+    mazzoScopeP3Text->setFixedWidth(50);
+
+    // Forza la policy a Fixed per non permettere espansioni
+    mazzoScopeP1Icon->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    mazzoScopeP3Icon->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    player1Container->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    player3Container->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 
     player1Container->setStyleSheet("QWidget { border: 2px solid #16a9ac; border-radius: 8px; }");
     player3Container->setStyleSheet("QWidget { border: 2px solid #16a9ac; border-radius: 8px; }");
 
     // Add side players to the sides
-    middleGrid->addWidget(player3Container, 0, 1); // Left
-    middleGrid->addWidget(player1Container, 0, 3); // Right
+    middleGrid->addWidget(player3Container, 0, 1);
+    middleGrid->addWidget(player1Container, 0, 3);
 
     // Table
     QGroupBox *tableContainer = new QGroupBox();
-    tableContainer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
+    tableContainer->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     // Forza il widget a ignorare le dimensioni minime calcolate dai figli
-    tableContainer->setMinimumSize(0, 0);
+    tableContainer->setFixedHeight(300);
+    tableContainer->setFixedWidth(800);
     tableContainer->setStyleSheet(
         "QGroupBox { background-color: #1e6b36; border: 2px solid #144d26; border-radius: 8px; margin-top: 12px; font-weight: bold; color: #ffffff; }"
         "QGroupBox::title { subcontrol-origin: margin; subcontrol-position: top left; padding: 0 5px; color: #2c3e50; }");
@@ -170,7 +183,7 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
 
     // Add table to center column and make it stretch
     middleGrid->addWidget(tableContainer, 0, 2, 1, 1);
-    middleGrid->setColumnStretch(1, 5); // Table gets 5x the width of side columns
+    middleGrid->setColumnStretch(1, 4); // Table gets 5x the width of side columns
 
     gameLayout->addLayout(middleGrid, 5);
     middleGrid->setRowStretch(0, 10);
@@ -178,7 +191,8 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
     // 6. Bottom Zone (Your hand)
     p2StatsContainer = new QWidget(this);
 
-    QGroupBox *handContainer = new QGroupBox("LA TUA MANO", this);
+    QGroupBox *handContainer = new QGroupBox(this);
+    handContainer->setFixedWidth(800);
     handContainer->setStyleSheet(
         "QGroupBox { "
         "   border: 2px solid #16a9ac; " // Stesso bordo degli altri
@@ -225,7 +239,14 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
     handZoneLayout->addWidget(p2StatsContainer);
     handZoneLayout->addWidget(cardsWrapper); // Aggiungiamo il wrapper, non handLayout!
 
-    gameLayout->addWidget(handContainer, 2);
+    gameLayout->setAlignment(Qt::AlignCenter);
+    mainLayout->setAlignment(Qt::AlignCenter);
+    QHBoxLayout *handWrapper = new QHBoxLayout();
+    handWrapper->addStretch();             // Spinge a destra
+    handWrapper->addWidget(handContainer); // Il widget sta al centro
+    handWrapper->addStretch();
+    gameLayout->addLayout(handWrapper, 2);
+
     mainLayout->addWidget(gameArea, 1);
 
     // Collegamento con array di puntatori
