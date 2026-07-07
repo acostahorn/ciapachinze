@@ -70,6 +70,8 @@ struct PlayerState
     QVector<Carta> hand;
     QVector<Carta> prese;
     QVector<Carta> scope;
+    int totaleScope;
+    bool carteScoperte = false;
 };
 
 struct GameConfig
@@ -111,6 +113,11 @@ private:
     GameState state;
 
     // Layouts
+    QLabel *mazzoPreseIconArr[4];
+    QLabel *mazzoPreseTextArr[4];
+    QLabel *mazzoScopeIconArr[4];
+    QLabel *mazzoScopeTextArr[4];
+
     QVBoxLayout *mainLayout;
     QHBoxLayout *topZone;
     QHBoxLayout *middleZone;
@@ -135,15 +142,24 @@ private:
     // Assuming player containers are widgets (e.g., QFrame or QGroupBox)
     QWidget *player0Container;
     QWidget *p0StatsContainer;
-    QLabel *mazzoPreseP0Label;
-    QLabel *mazzoScopeP0Label;
+
+    QLabel *mazzoPreseP0Icon;
+    QLabel *mazzoPreseP0Text;
+    QLabel *mazzoScopeP0Icon;
+    QLabel *mazzoScopeP0Text;
 
     QWidget *player1Container;
     QWidget *player3Container;
-    QLabel *mazzoPreseP1Label; // Giocatore destra
-    QLabel *mazzoScopeP1Label;
-    QLabel *mazzoPreseP3Label; // Giocatore sinistra
-    QLabel *mazzoScopeP3Label;
+
+    QLabel *mazzoPreseP1Icon; // Giocatore a destra
+    QLabel *mazzoPreseP1Text;
+    QLabel *mazzoScopeP1Icon;
+    QLabel *mazzoScopeP1Text;
+
+    QLabel *mazzoPreseP3Icon; // Giocatore sinistra
+    QLabel *mazzoPreseP3Text;
+    QLabel *mazzoScopeP3Icon;
+    QLabel *mazzoScopeP3Text;
 
     int selectedHandCardIndex = -1;     // -1 means no selected card in hand
     QList<int> selectedTableIndices;    // index of selected cards from the table
@@ -151,7 +167,13 @@ private:
     int revealedCardIndex = -1;
     int lastPlayerToScore = -1;
 
+    // TEST SWITCH
+    bool isTestMode = true;
+
     QVector<Carta> generateShuffledDeck();
+    QVector<Carta> generateTestDeck();
+
+    Carta generaCarta(int i);
 
     void setupGame();
     void initialDeal();
@@ -168,6 +190,13 @@ private:
 
     void enableHandInteraction(bool enabled);
     void processTurn();
+
+    bool checkBuonaDaDieci(int playerIndex);
+    void applyBuonaDaDieci(int playerIndex);
+
+    bool checkBuonaDaTre(int playerIndex);
+    void applyBuonaDaTre(int playerIndex);
+
     bool eventFilter(QObject *obj, QEvent *event);
     void playCard(int handIndex, QList<int> &tableIndices);
 
@@ -184,6 +213,7 @@ private:
     void aggiornaMazzoScope(PlayerState &p, Carta &c);
     QVector<Mossa> possibiliPrese(int handIndex);
     QVector<Mossa> trovaTutteLePrese(int handIndex);
+    bool contieneMatta(const QVector<Carta> &tableCards);
 
     int calcolaValoreTattico(const Mossa &m);
 
