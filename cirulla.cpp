@@ -18,13 +18,46 @@
 #include <QVector>
 #include <QDirIterator>
 #include <QKeyEvent>
+#include <QPainter>
 
 Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
 {
 
-    this->setFixedSize(1200, 900);
+    this->setFixedSize(1400, 1000);
 
-    // 1. INITIALIZE ALL CONTAINERS
+    // Nel costruttore della tua classe principale
+    this->setObjectName("MainWindow"); // Importante per referenziarlo
+
+    this->setStyleSheet(
+        "QWidget#MainWindow { "
+        "   background-color: #000c18; " // Blu notte
+        "} "
+        "* { " // Questo asterisco applica a OGNI widget esistente nella finestra
+        "   background-color: transparent; "
+        "   color: #f2f3f6; "                      // Testo grigio-azzurro
+        "   font-family: 'Segoe UI', sans-serif; " // Font pulito
+        "   font-size: 20; "                       // Font pulito
+        "} "
+        "QGroupBox { "
+        "   border: 2px solid #1a4f5f; "
+        "   border-radius: 10px; "
+        "   margin-top: 10px; "
+        "} "
+        "QGroupBox::title { "
+        "   color: #ffffff; "
+        "   font-weight: bold; "
+        "}");
+
+    // playerstyle
+    QString playerStyle =
+        "QWidget { "
+
+        "   border: 1px solid #34495e; " // Bordo discreto, non elettrico
+        "   border-radius: 12px; "       // Arrotondamento più morbido
+        "}";
+
+    // CONTAINERS
+
     // Top Player (centered)
     player0Container = new QWidget(this);
     p0StatsContainer = new QWidget(this);
@@ -39,10 +72,13 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
     player1Container = new QWidget(this);
     QVBoxLayout *layout1 = new QVBoxLayout(player1Container); // Questo è NECESSARIO per evitare crash
     layout1->setContentsMargins(5, 5, 5, 5);
+
     player1Container->setMinimumSize(100, 400);
+    player1Container->setStyleSheet(playerStyle);
 
     // Per il Giocatore 3
     player3Container = new QWidget(this);
+    player3Container->setStyleSheet(playerStyle);
     QVBoxLayout *layout3 = new QVBoxLayout(player3Container); // Questo è NECESSARIO per evitare crash
     layout3->setContentsMargins(5, 5, 5, 5);
     player3Container->setMinimumSize(100, 400);
@@ -76,20 +112,23 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
     QVBoxLayout *statsLayoutP0 = new QVBoxLayout(p0StatsContainer); // Assegnato qui!
 
     mazzoPreseP0Icon = new QLabel(this);
-    mazzoPreseP0Text = new QLabel("Prese: 0", this);
     mazzoScopeP0Icon = new QLabel(this);
-    mazzoScopeP0Text = new QLabel("Scope: 0", this);
+    mazzoPreseP0Icon->setFixedHeight(70);
+    mazzoScopeP0Icon->setFixedHeight(70);
+    mazzoP0Text = new QLabel("Prese: 0\nScope: 0", this);
+    P0Avatar = new QLabel(this);
+    P0Avatar->setFixedSize(100, 130);
+
     // 2. Aggiungi le label al layout del contenitore
     statsLayoutP0->addWidget(mazzoScopeP0Icon);
-    statsLayoutP0->addWidget(mazzoScopeP0Text);
     statsLayoutP0->addWidget(mazzoPreseP0Icon);
-    statsLayoutP0->addWidget(mazzoPreseP0Text);
+    statsLayoutP0->addWidget(mazzoP0Text);
 
     // 3. Ora p0StatsContainer è "pieno" di statistiche.
     // Possiamo metterlo nel Grid insieme al contenitore delle carte (player0Container)
     QGridLayout *middleTopGrid = new QGridLayout();
     QWidget *p0Wrapper = new QWidget(this);
-    p0Wrapper->setStyleSheet("QWidget { border: 2px solid #16a9ac; border-radius: 8px; }");
+    p0Wrapper->setStyleSheet(playerStyle);
     QHBoxLayout *wrapper0Layout = new QHBoxLayout(p0Wrapper);
     wrapper0Layout->setContentsMargins(5, 5, 5, 5);
     wrapper0Layout->setSpacing(10);
@@ -99,6 +138,7 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
     p0Wrapper->setFixedWidth(800);
     // player0Container->setFixedHeight(200);
 
+    wrapper0Layout->addWidget(P0Avatar);
     wrapper0Layout->addWidget(p0StatsContainer);
     wrapper0Layout->addWidget(player0Container);
     middleTopGrid->addWidget(p0Wrapper, 0, 0, Qt::AlignCenter);
@@ -109,59 +149,58 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
     QGridLayout *middleGrid = new QGridLayout();
 
     mazzoPreseP3Icon = new QLabel(this);
-    mazzoPreseP3Text = new QLabel("Prese: 0", this);
     mazzoScopeP3Icon = new QLabel(this);
-    mazzoScopeP3Text = new QLabel("Scope: 0", this);
+    mazzoP3Text = new QLabel(this);
+    P3Avatar = new QLabel(this);
+    P3Avatar->setFixedSize(100, 130);
 
     mazzoPreseP1Icon = new QLabel(this);
-    mazzoPreseP1Text = new QLabel("Prese: 0", this);
     mazzoScopeP1Icon = new QLabel(this);
-    mazzoScopeP1Text = new QLabel("Scope: 0", this);
+    mazzoP1Text = new QLabel(this);
+    P1Avatar = new QLabel(this);
+    P1Avatar->setFixedSize(100, 130);
 
     mazzoScopeP1Icon->setFixedHeight(100);
     mazzoScopeP1Icon->setFixedHeight(100);
 
     layout3->addWidget(mazzoPreseP3Icon);
-    layout3->addWidget(mazzoPreseP3Text);
     layout3->addWidget(mazzoScopeP3Icon);
-    layout3->addWidget(mazzoScopeP3Text);
+    layout3->addWidget(mazzoP3Text);
+    layout3->addWidget(P3Avatar);
 
     layout1->addWidget(mazzoPreseP1Icon);
-    layout1->addWidget(mazzoPreseP1Text);
     layout1->addWidget(mazzoScopeP1Icon);
-    layout1->addWidget(mazzoScopeP1Text);
+    layout1->addWidget(mazzoP1Text);
+    layout1->addWidget(P1Avatar);
 
     middleGrid->setColumnStretch(0, 1);
     middleGrid->setColumnStretch(1, 1);
-    middleGrid->setColumnStretch(2, 10); // Il tavolo domina
+    middleGrid->setColumnStretch(2, 8); // Il tavolo domina
     middleGrid->setColumnStretch(3, 1);
     middleGrid->setColumnStretch(4, 1);
 
-    middleGrid->addWidget(mazzoScopeP1Icon, 0, 0);
-    middleGrid->addWidget(mazzoScopeP1Text, 1, 0);
+    middleGrid->addWidget(mazzoScopeP1Icon, 1, 0);
+    middleGrid->addWidget(P1Avatar, 0, 0);
     middleGrid->addWidget(mazzoPreseP1Icon, 2, 0);
-    middleGrid->addWidget(mazzoPreseP1Text, 3, 0);
+    middleGrid->addWidget(mazzoP1Text, 3, 0);
 
-    middleGrid->addWidget(mazzoScopeP3Icon, 0, 4);
-    middleGrid->addWidget(mazzoScopeP3Text, 1, 4);
+    middleGrid->addWidget(P3Avatar, 0, 4);
+    middleGrid->addWidget(mazzoScopeP3Icon, 1, 4);
     middleGrid->addWidget(mazzoPreseP3Icon, 2, 4);
-    middleGrid->addWidget(mazzoPreseP3Text, 3, 4);
+    middleGrid->addWidget(mazzoP3Text, 3, 4);
 
     player1Container->setFixedWidth(100); // Scegli una misura che ti piace
-    mazzoScopeP1Icon->setFixedWidth(50);
-    mazzoScopeP1Text->setFixedWidth(50);
+    mazzoScopeP1Icon->setFixedWidth(100);
+    mazzoP1Text->setFixedWidth(100);
     player3Container->setFixedWidth(100);
-    mazzoScopeP3Icon->setFixedWidth(50);
-    mazzoScopeP3Text->setFixedWidth(50);
+    mazzoScopeP3Icon->setFixedWidth(100);
+    mazzoP3Text->setFixedWidth(100);
 
     // Forza la policy a Fixed per non permettere espansioni
     mazzoScopeP1Icon->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     mazzoScopeP3Icon->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     player1Container->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     player3Container->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-
-    player1Container->setStyleSheet("QWidget { border: 2px solid #16a9ac; border-radius: 8px; }");
-    player3Container->setStyleSheet("QWidget { border: 2px solid #16a9ac; border-radius: 8px; }");
 
     // Add side players to the sides
     middleGrid->addWidget(player3Container, 0, 1);
@@ -172,11 +211,16 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
 
     tableContainer->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     // Forza il widget a ignorare le dimensioni minime calcolate dai figli
-    tableContainer->setFixedHeight(300);
+    tableContainer->setFixedHeight(400);
     tableContainer->setFixedWidth(800);
     tableContainer->setStyleSheet(
-        "QGroupBox { background-color: #1e6b36; border: 2px solid #144d26; border-radius: 8px; margin-top: 12px; font-weight: bold; color: #ffffff; }"
-        "QGroupBox::title { subcontrol-origin: margin; subcontrol-position: top left; padding: 0 5px; color: #2c3e50; }");
+        "QGroupBox { "
+        "   background-color: qradialgradient(cx:0.5, cy:0.5, radius:0.8, fx:0.5, fy:0.5, stop:0 #27ae60, stop:1 #1e8449); "
+        "   border: 4px solid #144d26; "
+        "   border-radius: 15px; "
+        "   font-weight: bold; color: #ffffff; "
+        "}");
+
     tableLayout = new QGridLayout(tableContainer);
     tableLayout->setAlignment(Qt::AlignCenter);
     tableContainer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -192,43 +236,35 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
     p2StatsContainer = new QWidget(this);
 
     QGroupBox *handContainer = new QGroupBox(this);
+    handContainer->setFlat(true);
+
     handContainer->setFixedWidth(800);
+
     handContainer->setStyleSheet(
         "QGroupBox { "
-        "   border: 2px solid #16a9ac; " // Stesso bordo degli altri
-        "   border-radius: 8px; "
-        "   margin-top: 10px; " // Spazio per il titolo
-        "   font-weight: bold; "
-        "   color: #27ae60; "
-        "} "
-        "QGroupBox::title { "
-        "   subcontrol-origin: margin; "
-        "   subcontrol-position: top center; " // Titolo centrato
-        "   padding: 0 5px; "
+        "   border: 1px solid #34495e; " // Bordo discreto, non elettrico
+        "   border-radius: 12px; "       // Arrotondamento più morbido
         "}");
-
-    handContainer->setStyleSheet("QGroupBox { font-weight: bold; color: #27ae60; }");
     QHBoxLayout *handZoneLayout = new QHBoxLayout(handContainer);
     handContainer->setFixedHeight(230);
     // A. Zona Statistiche
-    // Se p0StatsContainer è il nome del widget che le tue funzioni si aspettano, usa quello
-    p2StatsContainer->setStyleSheet("QWidget { border: 2px solid #16a9ac; border-radius: 8px; }");
+    PGAvatar = new QLabel(this);
+    PGAvatar->setFixedSize(100, 130);
     p2StatsContainer->setFixedWidth(100);
+    p2StatsContainer->setStyleSheet(playerStyle);
     QVBoxLayout *statsLayout = new QVBoxLayout(p2StatsContainer);
 
     mazzoPreseIcon = new QLabel();
-    mazzoPreseText = new QLabel("Prese: 0", this);
+    mazzoText = new QLabel("Scope: 0\nPrese: 0", this);
     mazzoScopeIcon = new QLabel();
-    mazzoScopeText = new QLabel("Scope: 0", this);
 
     statsLayout->addWidget(mazzoScopeIcon);
-    statsLayout->addWidget(mazzoScopeText);
     statsLayout->addWidget(mazzoPreseIcon);
-    statsLayout->addWidget(mazzoPreseText);
+    statsLayout->addWidget(mazzoText);
 
     // B. Zona Carte (Il trucco qui)
     QWidget *cardsWrapper = new QWidget(); // Questo serve solo per lo stile
-    cardsWrapper->setStyleSheet("QWidget { border: 2px solid #16a9ac; border-radius: 8px; }");
+    cardsWrapper->setStyleSheet(playerStyle);
 
     // cardsWrapper->setFixedHeight(200);
     // Creiamo l'handLayout dentro il wrapper, così le funzioni lo trovano
@@ -236,6 +272,7 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
     handLayout->setAlignment(Qt::AlignCenter);
 
     // C. Assemblaggio finale
+    handZoneLayout->addWidget(PGAvatar);
     handZoneLayout->addWidget(p2StatsContainer);
     handZoneLayout->addWidget(cardsWrapper); // Aggiungiamo il wrapper, non handLayout!
 
@@ -250,26 +287,49 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
     mainLayout->addWidget(gameArea, 1);
 
     // Collegamento con array di puntatori
+
+    for (int i = 0; i < 4; ++i)
+    {
+        avatarArr[i] = nullptr; // Fondamentale!
+    }
+
     mazzoPreseIconArr[0] = mazzoPreseP0Icon;
-    mazzoPreseTextArr[0] = mazzoPreseP0Text;
     mazzoScopeIconArr[0] = mazzoScopeP0Icon;
-    mazzoScopeTextArr[0] = mazzoScopeP0Text;
+    mazzoTextArr[0] = mazzoP0Text;
+    avatarArr[0] = P0Avatar;
 
     mazzoPreseIconArr[1] = mazzoPreseP1Icon;
-    mazzoPreseTextArr[1] = mazzoPreseP1Text;
     mazzoScopeIconArr[1] = mazzoScopeP1Icon;
-    mazzoScopeTextArr[1] = mazzoScopeP1Text;
+    mazzoTextArr[1] = mazzoP1Text;
+    avatarArr[1] = P1Avatar;
 
     mazzoPreseIconArr[2] = mazzoPreseIcon;
-    mazzoPreseTextArr[2] = mazzoPreseText;
     mazzoScopeIconArr[2] = mazzoScopeIcon;
-    mazzoScopeTextArr[2] = mazzoScopeText;
+    mazzoTextArr[2] = mazzoText;
+    avatarArr[2] = PGAvatar;
 
     mazzoPreseIconArr[3] = mazzoPreseP3Icon;
-    mazzoPreseTextArr[3] = mazzoPreseP3Text;
     mazzoScopeIconArr[3] = mazzoScopeP3Icon;
-    mazzoScopeTextArr[3] = mazzoScopeP3Text;
+    mazzoTextArr[3] = mazzoP3Text;
+    avatarArr[3] = P3Avatar;
 
+    for (int i = 0; i < 4; ++i)
+    {
+        mazzoScopeIconArr[i]->setStyleSheet("QLabel {border: none}");
+        mazzoPreseIconArr[i]->setStyleSheet("QLabel {border: none}");
+    };
+
+    for (int i = 0; i < 4; ++i)
+    {
+        if (avatarArr[i])
+        {
+            // Applica un bordo elegante con CSS (opzionale, per la sfumatura esterna)
+            avatarArr[i]->setStyleSheet("border: 3px solid qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #0a02e7, stop:1 #ffffff); border-radius: 10px;");
+
+            // Applica il ritaglio grafico
+            applyCircularMask(avatarArr[i]);
+        }
+    }
     // 7. Initialization
     setupGame();
 
@@ -306,12 +366,17 @@ void Cirulla::setupGame()
 {
     config.mode = GameMode::Offline;
     config.humanSeatIndex = 2;
-    config.playerNames = {"Pippo", "Ugo", "Bacci", "Pina"};
+    config.playerNames = {"Baciccia", "Ugo", "Alberto", "Mussadiferro"};
     state.seats.clear();
     for (int i = 0; i < 4; ++i)
     {
         PlayerState p;
         p.id = i;
+        p.totaleScope = 0;
+        QString avatarPath = "avatars/" + config.playerNames[i] + ".png";
+        QPixmap cardImage(avatarPath);
+        avatarArr[i]->setPixmap(cardImage.scaled(120, 140, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+
         if (i == config.humanSeatIndex)
         {
             p.name = config.playerNames[i] + "(tu)";
@@ -324,6 +389,7 @@ void Cirulla::setupGame()
             p.type = SeatType::Bot;
         }
         state.seats.append(p);
+        aggiornaStats(p.id);
     }
 }
 
@@ -394,7 +460,7 @@ void Cirulla::showTable()
 
         // Load and scale the image
         QPixmap cardImage(qPathStr);
-        cardLabel->setPixmap(cardImage.scaled(100, 150, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        cardLabel->setPixmap(cardImage.scaled(100, 120, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 
         // Calculate grid coordinates
         int row = i / cardsPerRow;
@@ -446,7 +512,7 @@ void Cirulla::dealersChance()
                     state.seats[state.dealerIndex].prese.append(state.tableCards[i]);
                 }
                     state.seats[state.dealerIndex].totaleScope = 1;
-                    mazzoScopeTextArr[state.dealerIndex]->setText("Scope: " + QString::number(state.seats[state.dealerIndex].totaleScope));
+                  aggiornaStats(state.dealerIndex);
                 
             } else {
                 state.seats[state.dealerIndex].scope.append(state.tableCards[0]);
@@ -456,9 +522,8 @@ void Cirulla::dealersChance()
                 }
                     
                     state.seats[state.dealerIndex].totaleScope = 2;
-                    mazzoScopeTextArr[state.dealerIndex]->setText("Scope: " + QString::number(state.seats[state.dealerIndex].totaleScope));
-
-                
+                     aggiornaStats(state.dealerIndex);
+            
             }
             
             state.tableCards.clear();
@@ -502,7 +567,7 @@ void Cirulla::renderHandToLayout(const PlayerState &p, QLayout *targetLayout)
             path = QString("cards/%1.png").arg(card.id + 1);
             if (i == selectedHandCardIndex)
             {
-                cardLabel->setStyleSheet("border: 3px solid blue");
+                cardLabel->setStyleSheet("border: 3px solid gold");
             }
             else
             {
@@ -1400,8 +1465,8 @@ void Cirulla::handleEndOfGame()
 void Cirulla::aggiornaMazzoPrese(PlayerState &p)
 {
     QPixmap retro("cards/back-teal.png");
-    mazzoPreseIconArr[p.id]->setPixmap(retro.scaled(50, 75, Qt::KeepAspectRatio));
-    mazzoPreseTextArr[p.id]->setText("Prese: " + QString::number(p.prese.size()));
+    mazzoPreseIconArr[p.id]->setPixmap(retro.scaled(50, 70, Qt::KeepAspectRatio));
+    aggiornaStats(p.id);
 }
 
 void Cirulla::aggiornaMazzoScope(PlayerState &p, Carta &c)
@@ -1410,8 +1475,8 @@ void Cirulla::aggiornaMazzoScope(PlayerState &p, Carta &c)
     QString cartaIconPath = QString("cards/%1.png").arg(c.id + 1);
 
     QPixmap cartaIcon(cartaIconPath);
-    mazzoScopeIconArr[p.id]->setPixmap(cartaIcon.scaled(50, 75, Qt::KeepAspectRatio));
-    mazzoScopeTextArr[p.id]->setText("Scope: " + QString::number(p.totaleScope));
+    mazzoScopeIconArr[p.id]->setPixmap(cartaIcon.scaled(50, 70, Qt::KeepAspectRatio));
+    aggiornaStats(p.id);
 }
 
 bool Cirulla::contieneMatta(const QVector<Carta> &tableCards)
@@ -1489,13 +1554,14 @@ void Cirulla::applyBuonaDaDieci(int playerIndex)
     {
         state.seats[playerIndex].carteScoperte = true;
         state.seats[playerIndex].totaleScope += 10;
-        mazzoScopeTextArr[playerIndex]->setText("Scope: " + QString::number(state.seats[playerIndex].totaleScope));
+        aggiornaStats(playerIndex);
         showHands();
-        QString nomeGiocatore = (playerIndex == config.humanSeatIndex) ? "Tu" : "Il Giocatore " + QString::number(playerIndex);
-
+        QString nomeGiocatore = (playerIndex == config.humanSeatIndex) ? "Tu" : "Il Giocatore " + config.playerNames[playerIndex];
+        QString verbo = (playerIndex == config.humanSeatIndex) ? " hai " : " ha ";
+        QString messaggio = verbo + "bussato e " + verbo + "fatto 10 scope!";
         QMessageBox msgBox;
         msgBox.setWindowTitle("Buona da 10!");
-        msgBox.setText(nomeGiocatore + " ha bussato e fa 10 scope!");
+        msgBox.setText(nomeGiocatore + messaggio);
         msgBox.setIcon(QMessageBox::Information);
         msgBox.setStandardButtons(QMessageBox::Ok);
         msgBox.exec(); // Questo blocca l'esecuzione finche' non si preme OK
@@ -1507,17 +1573,44 @@ void Cirulla::applyBuonaDaTre(int playerIndex)
     {
         state.seats[playerIndex].carteScoperte = true;
         state.seats[playerIndex].totaleScope += 3;
-        mazzoScopeTextArr[playerIndex]->setText("Scope: " + QString::number(state.seats[playerIndex].totaleScope));
+        aggiornaStats(playerIndex);
         showHands();
-        QString nomeGiocatore = (playerIndex == config.humanSeatIndex) ? "Tu" : "Il Giocatore " + QString::number(playerIndex);
 
+        QString nomeGiocatore = (playerIndex == config.humanSeatIndex) ? "Tu" : "Il Giocatore " + config.playerNames[playerIndex];
+        QString verbo = (playerIndex == config.humanSeatIndex) ? " hai " : " ha ";
+        QString messaggio = verbo + "bussato e " + verbo + "fatto 3 scope!";
         QMessageBox msgBox;
         msgBox.setWindowTitle("Barsega!");
-        msgBox.setText(nomeGiocatore + " ha bussato e fa 3 scope!");
+        msgBox.setText(nomeGiocatore + messaggio);
         msgBox.setIcon(QMessageBox::Information);
         msgBox.setStandardButtons(QMessageBox::Ok);
         msgBox.exec(); // Questo blocca l'esecuzione finche' non si preme OK
     }
+}
+
+void Cirulla::aggiornaStats(int playerIndex)
+{
+    mazzoTextArr[playerIndex]->setText(config.playerNames[playerIndex] +
+                                       "\nPrese: " + QString::number(state.seats[playerIndex].prese.size()) +
+                                       "\nScope: " + QString::number(state.seats[playerIndex].totaleScope));
+}
+
+void Cirulla::applyCircularMask(QLabel *label)
+{
+    // 1. Crea una maschera circolare o arrotondata
+    QBitmap mask(label->size());
+    mask.fill(Qt::color0); // Trasparente
+
+    QPainter painter(&mask);
+    painter.setBrush(Qt::color1);
+    painter.setRenderHint(QPainter::Antialiasing);
+
+    // Disegna un rettangolo arrotondato (o un cerchio)
+    painter.drawRoundedRect(0, 0, label->width(), label->height(), 20, 20);
+    painter.end();
+
+    // 2. Applica la maschera
+    label->setMask(mask);
 }
 
 Cirulla::~Cirulla()

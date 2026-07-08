@@ -114,9 +114,10 @@ private:
 
     // Layouts
     QLabel *mazzoPreseIconArr[4];
-    QLabel *mazzoPreseTextArr[4];
+    QLabel *avatarArr[4];
+
     QLabel *mazzoScopeIconArr[4];
-    QLabel *mazzoScopeTextArr[4];
+    QLabel *mazzoTextArr[4];
 
     QVBoxLayout *mainLayout;
     QHBoxLayout *topZone;
@@ -133,33 +134,33 @@ private:
 
     // --- main player taken and scope labels
 
+    QLabel *PGAvatar;
     QLabel *mazzoPreseIcon;
-    QLabel *mazzoPreseText;
-
     QLabel *mazzoScopeIcon;
-    QLabel *mazzoScopeText;
+    QLabel *mazzoText;
 
     // Assuming player containers are widgets (e.g., QFrame or QGroupBox)
     QWidget *player0Container;
     QWidget *p0StatsContainer;
+    QLabel *P0Avatar;
 
     QLabel *mazzoPreseP0Icon;
-    QLabel *mazzoPreseP0Text;
     QLabel *mazzoScopeP0Icon;
-    QLabel *mazzoScopeP0Text;
+    QLabel *mazzoP0Text;
 
     QWidget *player1Container;
     QWidget *player3Container;
 
+    QLabel *P1Avatar;
     QLabel *mazzoPreseP1Icon; // Giocatore a destra
-    QLabel *mazzoPreseP1Text;
     QLabel *mazzoScopeP1Icon;
-    QLabel *mazzoScopeP1Text;
 
+    QLabel *mazzoP1Text;
+
+    QLabel *P3Avatar;
     QLabel *mazzoPreseP3Icon; // Giocatore sinistra
-    QLabel *mazzoPreseP3Text;
     QLabel *mazzoScopeP3Icon;
-    QLabel *mazzoScopeP3Text;
+    QLabel *mazzoP3Text;
 
     int selectedHandCardIndex = -1;     // -1 means no selected card in hand
     QList<int> selectedTableIndices;    // index of selected cards from the table
@@ -214,6 +215,8 @@ private:
     QVector<Mossa> possibiliPrese(int handIndex);
     QVector<Mossa> trovaTutteLePrese(int handIndex);
     bool contieneMatta(const QVector<Carta> &tableCards);
+    void aggiornaStats(int playerIndex);
+    void applyCircularMask(QLabel *label);
 
     int calcolaValoreTattico(const Mossa &m);
 
