@@ -19,11 +19,13 @@
 #include <QDirIterator>
 #include <QKeyEvent>
 #include <QPainter>
+#include <QPainterPath>
 
 Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
 {
 
     this->setFixedSize(1400, 1000);
+    stackedWidget = new QStackedWidget(this);
 
     // Nel costruttore della tua classe principale
     this->setObjectName("MainWindow"); // Importante per referenziarlo
@@ -38,8 +40,16 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
         "   font-family: 'Segoe UI', sans-serif; " // Font pulito
         "   font-size: 20; "                       // Font pulito
         "} "
+        "QLabel#PrimieraText { "
+        "   border: none; "
+        "   background-color: transparent; "
+        "} "
+        "QLabel { "
+        "   font-size: 16px; " // Aumenta da 14 o 15 a 16 o 18
+        "   font-weight: 500; "
+        "} "
         "QGroupBox { "
-        "   border: 2px solid #1a4f5f; "
+        "   border: 2px solid #3db0d3; "
         "   border-radius: 10px; "
         "   margin-top: 10px; "
         "} "
@@ -101,7 +111,8 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
     outputArea->setMaximumHeight(100);
     mainLayout->addWidget(outputArea);
 
-    QWidget *gameArea = new QWidget(this);
+    gameArea = new QWidget(this);
+
     QVBoxLayout *gameLayout = new QVBoxLayout(gameArea);
     gameLayout->setContentsMargins(0, 0, 0, 0); // Nessun margine extra
 
@@ -284,7 +295,13 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
     handWrapper->addStretch();
     gameLayout->addLayout(handWrapper, 2);
 
-    mainLayout->addWidget(gameArea, 1);
+    stackedWidget->addWidget(gameArea);
+
+    scoreArea = new QWidget();
+
+    // Il padre ha un layout verticale di base
+
+    mainLayout->addWidget(stackedWidget);
 
     // Collegamento con array di puntatori
 
@@ -319,17 +336,77 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
         mazzoPreseIconArr[i]->setStyleSheet("QLabel {border: none}");
     };
 
-    for (int i = 0; i < 4; ++i)
-    {
-        if (avatarArr[i])
-        {
-            // Applica un bordo elegante con CSS (opzionale, per la sfumatura esterna)
-            avatarArr[i]->setStyleSheet("border: 3px solid qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #0a02e7, stop:1 #ffffff); border-radius: 10px;");
+    // Score Area Setup - AREA PUNTEGGIO
 
-            // Applica il ritaglio grafico
-            applyCircularMask(avatarArr[i]);
-        }
+    QGridLayout *scoreGrid = new QGridLayout();
+
+    for (int i = 0; i < 4; i++)
+    {
+        playerArea[i] = new QWidget();
+        QString bgColor = (i == 0 || i == 2) ? "#001a2e" : "#2e0e00";
+        QString borderColor = (i == 0 || i == 2) ? "#3db0d3" : "#d3603d";
+        playerArea[i]->setStyleSheet(QString("QWidget { background-color: %1; border: 1px solid %2; border-radius: 5px}")
+                                         .arg(bgColor)
+                                         .arg(borderColor));
+        playerArea[i]->setMinimumSize(300, 150);
+        playerScoreLayout[i] = new QHBoxLayout(playerArea[i]);
+        scoreAvatar[i] = new QLabel();
+        scoreAvatar[i]->setStyleSheet("QLabel {border: none}");
+        scoreAvatar[i]->setScaledContents(true);
+        scoreAvatar[i]->setFixedSize(100, 130);
+
+        QWidget *leftContainer = new QWidget();
+        QVBoxLayout *leftLayout = new QVBoxLayout(leftContainer);
+
+        QWidget *rightContainer = new QWidget();
+        QGridLayout *dataLayout = new QGridLayout(rightContainer);
+
+        nameLabel[i] = new QLabel();
+        nameLabel[i]->setStyleSheet("color: white;");
+
+        lblScope[i] = new QLabel("Scope: 0");
+        lblCarte[i] = new QLabel("Carte: 0");
+        lblDenari[i] = new QLabel("Denari: 0");
+        lblSettebello[i] = new QLabel("Settebello: No");
+        lblPiccola[i] = new QLabel("Piccola: -");
+        lblGrande[i] = new QLabel("Grande: -");
+        primieraContainer[i] = new QWidget();
+        lblTotale[i] = new QLabel("Totale: 0");
+
+        dataLayout->addWidget(lblScope[i], 0, 0);
+        dataLayout->addWidget(lblCarte[i], 1, 0);
+        dataLayout->addWidget(lblDenari[i], 1, 1);
+        dataLayout->addWidget(lblSettebello[i], 2, 0);
+
+        dataLayout->addWidget(primieraContainer[i], 2, 1);
+
+        dataLayout->addWidget(lblPiccola[i], 3, 0);
+        dataLayout->addWidget(lblGrande[i], 3, 1);
+        dataLayout->addWidget(lblTotale[i], 4, 0, 1, 2);
+
+        labelPunti[i] = new QLabel("Punti: 0");
+        labelPunti[i]->setStyleSheet("color: yellow; font-weight: bold;");
+
+        leftLayout->addWidget(scoreAvatar[i]);
+        leftLayout->addWidget(nameLabel[i]);
+        leftLayout->addWidget(labelPunti[i]);
+        leftLayout->addStretch(); // Spinge il testo in alto
+
+        playerScoreLayout[i]->addWidget(leftContainer);
+        playerScoreLayout[i]->addWidget(rightContainer);
+        playerScoreLayout[i]->addStretch();
     }
+
+    for (int i = 0; i < 4; i++)
+    {
+        int riga = (i == 0 || i == 2) ? 0 : 1;
+        int colonna = (i == 0 || i == 1) ? 0 : 1;
+        scoreGrid->addWidget(playerArea[i], riga, colonna);
+    }
+
+    scoreArea->setLayout(scoreGrid);
+    stackedWidget->addWidget(scoreArea);
+
     // 7. Initialization
     setupGame();
 
@@ -375,9 +452,15 @@ void Cirulla::setupGame()
         p.totaleScope = 0;
         QString avatarPath = "avatars/" + config.playerNames[i] + ".png";
         QPixmap cardImage(avatarPath);
-        avatarArr[i]->setPixmap(cardImage.scaled(120, 140, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 
-        if (i == config.humanSeatIndex)
+        if (avatarArr[i])
+        {
+
+            avatarArr[i]->setPixmap(cardImage.scaled(120, 140, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+            applyRoundedCorners(avatarArr[i]);
+        }
+
+        if (i == config.humanSeatIndex && botGame == false)
         {
             p.name = config.playerNames[i] + "(tu)";
             p.type = SeatType::Human;
@@ -841,7 +924,8 @@ void Cirulla::processTurn()
     {
         // Se è un bot, disabilitiamo l'input e avviamo la sua logica
         enableHandInteraction(false);
-        QTimer::singleShot(1000, this, &Cirulla::botPlay); // Delay per realismo
+
+        QTimer::singleShot(waitTime, this, &Cirulla::botPlay); // Delay per realismo
     }
 }
 
@@ -953,7 +1037,6 @@ void Cirulla::playCard(int handIndex, QList<int> &tableIndices)
         else
         {
             handleEndOfGame();
-            return;
         }
     }
     else
@@ -982,7 +1065,7 @@ void Cirulla::playCard(int handIndex, QList<int> &tableIndices)
     if (isCurrentPlayerBot())
     {
         enableHandInteraction(false);
-        QTimer::singleShot(1000, this, &Cirulla::botPlay);
+        QTimer::singleShot(waitTime, this, &Cirulla::botPlay);
     }
     else
     {
@@ -1367,7 +1450,7 @@ void Cirulla::executeBotMove(const Mossa &m)
     revealedCardIndex = m.handIndex;
     showHands();
 
-    QTimer::singleShot(1000, this, [=]()
+    QTimer::singleShot(waitTime, this, [=]()
                        {
         // Ora esegui la mossa vera e propria
         this->playCard(m.handIndex, const_cast<QList<int>&>(m.tableIndices)); 
@@ -1447,19 +1530,196 @@ void Cirulla::dealNextRound()
 
 void Cirulla::handleEndOfGame()
 {
-    outputArea->append("Le carte rimaste sul tavolo vanno all'ultimo giocatore che ha preso");
 
     PlayerState &ultimoAPrendere = state.seats[lastPlayerToScore];
+    outputArea->append("Le carte rimaste sul tavolo vanno all'ultimo giocatore che ha preso: " + config.playerNames[ultimoAPrendere.id]);
+
+    int lastOneId = ultimoAPrendere.id;
 
     for (auto &card : state.tableCards)
     {
+        // outputArea->append("Carta aggiunta: " + card.faceValue);
         ultimoAPrendere.prese.append(card);
     }
-    aggiornaMazzoPrese(ultimoAPrendere);
 
+    QTimer::singleShot(4000, this, [=]()
+                       {
+    PlayerState &player = state.seats[lastOneId];
+    aggiornaMazzoPrese(player);
     state.tableCards.clear();
+    showTable(); });
+    for (int i = 0; i < 4; i++)
+    {
+        nameLabel[i]->setText(config.playerNames[i]);
+        QString avatarPath = "avatars/" + config.playerNames[i] + ".png";
+        QPixmap cardImage(avatarPath);
 
-    showTable();
+        scoreAvatar[i]->setPixmap(cardImage.scaled(120, 140, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        applyRoundedCorners(scoreAvatar[i]);
+    }
+
+    // visualizza schermo punteggi
+    QTimer::singleShot(4000, this, [=]()
+                       { stackedWidget->setCurrentIndex(1); });
+    outputArea->clear();
+
+    for (auto &player : state.seats)
+    {
+        QVector<Carta> totaleCarte = player.prese + player.scope;
+        player.punteggi.append(calcolaPunteggio(totaleCarte, player.totaleScope));
+    }
+
+    // Carte, denari e primiera
+
+    for (int i = 0; i < 3; i++)
+    {
+        calcolaPunti(i);
+    }
+
+    // VISUALIZZAZIONE
+
+    outputArea->append("Primiera:");
+
+    for (int i = 0; i < 4; ++i)
+    {
+        lblScope[i]->setStyleSheet("color: #2ecc71; font-weight: bold;");
+        lblScope[i]->setText(QString("Scope: %1").arg(state.seats[i].punteggi[state.hand].scope));
+
+        QString carteResult = QString("N. Carte: %1").arg(state.seats[i].punteggi[state.hand].carte);
+        if (state.seats[i].punteggi[state.hand].cartePunto == 1)
+        {
+            // Il giocatore ha la maggioranza: mettiamo il testo in verde e aggiungiamo un segno distintivo
+            lblCarte[i]->setText(carteResult + " [Punto!]");
+            lblCarte[i]->setStyleSheet("color: #2ecc71; font-weight: bold;"); // Verde brillante
+        }
+        else
+        {
+            // Nessun punto o pareggio
+            lblCarte[i]->setText(carteResult);
+        }
+
+        // DENARI
+        QString denariResult = QString("N. Denari: %1").arg(state.seats[i].punteggi[state.hand].denari);
+
+        if (state.seats[i].punteggi[state.hand].denariPunto == 1)
+        {
+            // Il giocatore ha la maggioranza: mettiamo il testo in verde e aggiungiamo un segno distintivo
+            lblDenari[i]->setText(denariResult + " [Punto!]");
+            lblDenari[i]->setStyleSheet("color: #2ecc71; font-weight: bold;"); // Verde brillante
+        }
+        else
+        {
+            // Nessun punto o pareggio
+            lblDenari[i]->setText(denariResult);
+        }
+
+        // SETTEBELLO
+        if (state.seats[i].punteggi[state.hand].settebello == 1)
+        {
+            // Il giocatore ha il settebello
+            lblSettebello[i]->setText("Settebello: 1 [Punto!]");
+            lblSettebello[i]->setStyleSheet("color: #2ecc71; font-weight: bold;"); // Verde brillante
+        }
+        else
+        {
+            // Nessun punto
+            lblSettebello[i]->setText("Settebello: -");
+        }
+
+        // PRIMIERA
+
+        QHBoxLayout *primieraLayout = new QHBoxLayout(primieraContainer[i]);
+        primieraText[i] = new QLabel();
+        // primieraText[i]->setStyleSheet("border: none");
+        primieraLayout->setContentsMargins(0, 0, 0, 0);
+        primieraLayout->setSpacing(2);
+
+        for (int j = 0; j < 4; ++j)
+        {
+            primieraThumbnails[i][j] = new QLabel();
+            primieraThumbnails[i][j]->setFixedSize(25, 35); // Dimensione miniatura
+            primieraThumbnails[i][j]->setScaledContents(true);
+            primieraLayout->addWidget(primieraThumbnails[i][j]);
+
+            QString cardPath =
+                QString("cards/%1.png").arg(state.seats[i].punteggi[state.hand].primieraCarte[j].id + 1);
+            QString info = QString("%1 di %2, ")
+                               .arg(state.seats[i].punteggi[state.hand].primieraCarte[j].faceValue)
+                               .arg(cartaSemeToString(state.seats[i].punteggi[state.hand].primieraCarte[j].seme)); // Usa una funzione helper
+
+            outputArea->insertPlainText(info);
+
+            primieraThumbnails[i][j]->setPixmap(cardPath);
+            primieraThumbnails[i][j]->show();
+        }
+
+        outputArea->append("");
+
+        primieraLayout->addWidget(primieraText[i]);
+
+        if (state.seats[i].punteggi[state.hand].primieraPunto == 1)
+        {
+            // Il giocatore ha la primiera
+            primieraText[i]->setText("Primiera: 1 [Punto!]");
+            primieraText[i]->setStyleSheet("color: #2ecc71; font-weight: bold;"); // Verde brillante
+        }
+        else
+        {
+            // Nessun punto
+            primieraText[i]->setText("Primiera: -");
+        }
+
+        // PICCOLA
+
+        if (state.seats[i].punteggi[state.hand].piccola > 0)
+        {
+            // Il giocatore ha la piccola
+            lblPiccola[i]->setText(QString("Piccola: %1 punti!)").arg(state.seats[i].punteggi[state.hand].piccola));
+            lblPiccola[i]->setStyleSheet("color: #2ecc71; font-weight: bold;"); // Verde brillante
+        }
+        else
+        {
+            // Nessun punto
+            lblPiccola[i]->setText("Piccola: -");
+        }
+
+        // GRANDE
+
+        if (state.seats[i].punteggi[state.hand].grande > 0)
+        {
+            // Il giocatore ha la grande
+            lblGrande[i]->setText(QString("Grande: %1 punti!)").arg(state.seats[i].punteggi[state.hand].grande));
+            lblGrande[i]->setStyleSheet("color: #2ecc71; font-weight: bold;"); // Verde brillante
+        }
+        else
+        {
+            // Nessun punto
+            lblGrande[i]->setText("Grande: -");
+        }
+
+        int totale = state.seats[i].punteggi[state.hand].calcolaTotale();
+        lblTotale[i]->setText(QString("Totale: %1").arg(totale));
+        lblTotale[i]->setStyleSheet("color: #dc046d; font-weight: bold;");
+    }
+
+    ++state.hand;
+    /* * PSEUDOCODICE PER IL RESET E NUOVA PARTITA:
+     * * 1. RESET_GIOCATORI:
+     * Per ogni giocatore in state.seats:
+     * - Svuota il vettore 'prese'.
+     * - Svuota il vettore 'scope'.
+     * - Azzera 'totaleScope' (o aggiornalo se è un contatore cumulativo).
+     * - Azzera il numero di carte in mano (o prepara il nuovo mazzo).
+     * * 2. RESET_TAVOLO:
+     * - Svuota state.tableCards.
+     * - Resetta il deck di gioco (mescola e prepara).
+     * * 3. UI_CLEANUP:
+     * - Rimuovi fisicamente le icone carte dagli oggetti grafici.
+     * - Aggiorna i nomi/avatar (che devono restare visibili).
+     * - Richiama showTable() per visualizzare il tavolo vuoto/nuovo.
+     * * 4. AVVIO:
+     * - startGame() // Inizia la distribuzione delle nuove carte.
+     */
 }
 
 void Cirulla::aggiornaMazzoPrese(PlayerState &p)
@@ -1595,22 +1855,277 @@ void Cirulla::aggiornaStats(int playerIndex)
                                        "\nScope: " + QString::number(state.seats[playerIndex].totaleScope));
 }
 
-void Cirulla::applyCircularMask(QLabel *label)
+void Cirulla::applyRoundedCorners(QLabel *label)
 {
-    // 1. Crea una maschera circolare o arrotondata
-    QBitmap mask(label->size());
-    mask.fill(Qt::color0); // Trasparente
+    // Ottieni l'immagine originale dal widget
+    QPixmap original = label->pixmap();
+    if (original.isNull())
+        return;
 
-    QPainter painter(&mask);
-    painter.setBrush(Qt::color1);
-    painter.setRenderHint(QPainter::Antialiasing);
+    // Crea una nuova pixmap trasparente della stessa dimensione
+    QPixmap target(label->size());
+    target.fill(Qt::transparent);
 
-    // Disegna un rettangolo arrotondato (o un cerchio)
-    painter.drawRoundedRect(0, 0, label->width(), label->height(), 20, 20);
+    QPainter painter(&target);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
+
+    // Definisci il rettangolo arrotondato
+    QPainterPath path;
+    path.addRoundedRect(0, 0, label->width(), label->height(), 20, 20);
+
+    // "Taglia" l'area col path e disegna l'immagine dentro
+    painter.setClipPath(path);
+    painter.drawPixmap(0, 0, original.scaled(label->size(), Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation));
+
     painter.end();
 
-    // 2. Applica la maschera
-    label->setMask(mask);
+    // Applica l'immagine "arrotondata" alla label
+    label->setPixmap(target);
+}
+
+Score Cirulla::calcolaPunteggio(const QVector<Carta> &totaleCarte, int totaleScope)
+{
+    Score score;
+    score.scope = totaleScope;
+    score.carte = totaleCarte.length();
+    QVector<Carta> picche;
+    QVector<Carta> cuori;
+    QVector<Carta> denari;
+    QVector<Carta> fiori;
+    QVector<Carta> piccola;
+    QVector<Carta> grande;
+    for (auto &carta : totaleCarte)
+    {
+        switch (carta.seme)
+        {
+        case Seme::Picche:
+            picche.append(carta);
+            break;
+        case Seme::Cuori:
+            cuori.append(carta);
+            break;
+        case Seme::Denari:
+
+            denari.append(carta);
+            if (carta.faceValue == 7)
+                score.settebello = 1;
+            break;
+        case Seme::Fiori:
+            fiori.append(carta);
+            break;
+        }
+    }
+
+    score.denari = denari.length();
+
+    std::sort(denari.begin(), denari.end(), [](const Carta &a, const Carta &b)
+              { return a.faceValue < b.faceValue; });
+
+    // find the Piccola
+    // 1. Assicurati che ci siano denari prima di procedere
+    if (!denari.isEmpty())
+    {
+        int expectedValue = 1; // La scala deve partire dall'Asso (1)
+
+        for (const auto &carta : denari)
+        {
+            if (carta.faceValue == expectedValue)
+            {
+                piccola.append(carta);
+                expectedValue++; // Ti aspetti il valore successivo
+            }
+            else
+            {
+                break; // La sequenza si è interrotta
+            }
+        }
+    }
+
+    outputArea->append("PICCOLA:");
+
+    for (Carta carta : piccola)
+    {
+        QString cardPath =
+            QString("cards/%1.png").arg(carta.id + 1);
+        QString info = QString("%1 di %2, ")
+                           .arg(carta.faceValue)
+                           .arg(cartaSemeToString(carta.seme)); // Usa una funzione helper
+
+        outputArea->insertPlainText(info);
+    }
+
+    int piccolaSize = piccola.length();
+    if (piccolaSize >= 3)
+    {
+        score.piccola = piccolaSize;
+    }
+
+    // find the Grande
+    if (!denari.isEmpty())
+    {
+        int expectedValue = 10;
+
+        // Scorriamo il vettore denari al contrario per trovare la sequenza decrescente
+        for (auto it = denari.rbegin(); it != denari.rend(); ++it)
+        {
+            if (it->faceValue == expectedValue)
+            {
+                grande.append(*it);
+                expectedValue--;
+            }
+            else
+            {
+                break;
+            }
+        }
+    }
+
+    if (grande.length() >= 3)
+    {
+        score.grande = 5;
+    }
+    else
+    {
+        score.grande = 0;
+    }
+
+    // Funzione temporanea per gestire l'assegnazione sicura
+    auto assegnaCarta = [&](int index, const QVector<Carta> &mazzoSeme)
+    {
+        Carta migliore = trovaCartaMigliorePerSeme(mazzoSeme);
+
+        // Se l'ID è valido (es. maggiore di 0), assegniamo la carta.
+        // Altrimenti, lasciamo l'array pulito o settiamo un flag di "vuoto".
+        if (migliore.id > 0)
+        {
+            score.primieraCarte[index] = migliore;
+        }
+        else
+        {
+            score.primieraCarte[index].id = 0; // Segnaliamo che qui non c'è carta
+            score.primieraCarte[index].faceValue = 0;
+        }
+    };
+
+    assegnaCarta(0, picche);
+    assegnaCarta(1, cuori);
+    assegnaCarta(2, denari);
+    assegnaCarta(3, fiori);
+
+    score.primieraValore = 0;
+    for (int i = 0; i < 4; i++)
+    {
+        score.primieraValore += valorePrimieraCarta(score.primieraCarte[i]);
+    }
+
+    return score;
+}
+
+int Cirulla::valorePrimieraCarta(const Carta &carta)
+{
+    if (carta.id == ID_CARTA_NULLA)
+    {
+        return -1;
+    }
+    switch (carta.faceValue)
+    {
+    case 7:
+        return 21;
+    case 6:
+        return 18;
+    case 1:
+        return 16;
+    case 5:
+        return 15;
+    case 4:
+        return 14;
+    case 3:
+        return 13;
+    case 2:
+        return 12;
+    case 8:
+    case 9:
+    case 10:
+        return 10;
+    default:
+        return 0;
+    }
+}
+
+Carta Cirulla::trovaCartaMigliorePerSeme(const QVector<Carta> &carteSeme)
+{
+    Carta migliore;
+    migliore.id = ID_CARTA_NULLA;
+    migliore.faceValue = 0;
+    int maxVal = -1;
+
+    for (const auto &c : carteSeme)
+    {
+        int v = valorePrimieraCarta(c);
+        if (v > maxVal)
+        {
+            maxVal = v;
+            migliore = c;
+        }
+    }
+    return migliore;
+}
+
+void Cirulla::calcolaPunti(int tipoStat)
+{ // tipoStat: 0=carte, 1=denari, 2=primiera
+    int valoreMax = -1;
+    int conteggioMassimi = 0;
+
+    // 1. Trova il massimo e conta quanti lo hanno
+    for (const auto &giocatore : state.seats)
+    {
+        int valore = (tipoStat == 0) ? giocatore.punteggi[state.hand].carte : (tipoStat == 1) ? giocatore.punteggi[state.hand].denari
+                                                                                              : giocatore.punteggi[state.hand].primieraValore;
+
+        if (valore > valoreMax)
+        {
+            valoreMax = valore;
+            conteggioMassimi = 1;
+        }
+        else if (valore == valoreMax && valoreMax > 0)
+        {
+            conteggioMassimi++;
+        }
+    }
+
+    // 2. Assegna il punto solo se c'è un vincitore unico
+    for (auto &giocatore : state.seats)
+    {
+        int valore = (tipoStat == 0) ? giocatore.punteggi[state.hand].carte : (tipoStat == 1) ? giocatore.punteggi[state.hand].denari
+                                                                                              : giocatore.punteggi[state.hand].primieraValore;
+
+        bool vince = (valore == valoreMax && conteggioMassimi == 1 && valoreMax > 0);
+
+        if (tipoStat == 0)
+            giocatore.punteggi[state.hand].cartePunto = vince ? 1 : 0;
+        else if (tipoStat == 1)
+            giocatore.punteggi[state.hand].denariPunto = vince ? 1 : 0;
+        else
+            giocatore.punteggi[state.hand].primieraPunto = vince ? 1 : 0;
+    }
+}
+
+QString Cirulla::cartaSemeToString(Seme seme)
+{
+    switch (seme)
+    {
+    case Seme::Denari:
+        return "Denari";
+    case Seme::Picche:
+        return "Picche";
+    case Seme::Cuori:
+        return "Cuori";
+    case Seme::Fiori:
+        return "Fiori";
+    default:
+        return "Sconosciuto";
+    }
 }
 
 Cirulla::~Cirulla()

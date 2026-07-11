@@ -10,6 +10,7 @@
 #include <vector>
 #include <QKeyEvent>
 #include <QLabel>
+#include <QStackedWidget>
 
 enum class GameMode
 {
@@ -61,6 +62,27 @@ struct Mossa
     int ranking;
 };
 
+struct Score
+{
+    int scope = 0;
+    int carte = 0;
+    int denari = 0;
+    int primiera = 0;
+    int settebello = 0;
+    int grande = 0;
+    int piccola = 0;
+    int primieraValore = 0;
+    Carta primieraCarte[4];
+    int cartePunto = 0;
+    int denariPunto = 0;
+    int primieraPunto = 0;
+
+    int calcolaTotale() const
+    {
+        return scope + cartePunto + denariPunto + settebello + piccola + grande + primieraPunto;
+    }
+};
+
 struct PlayerState
 {
     int id;
@@ -72,6 +94,7 @@ struct PlayerState
     QVector<Carta> scope;
     int totaleScope;
     bool carteScoperte = false;
+    QVector<Score> punteggi;
 };
 
 struct GameConfig
@@ -91,6 +114,7 @@ struct GameState
     int deckIndex = 0;
     MatchPhase phase = MatchPhase::Configuration;
     QVector<PlayerState> seats;
+    int hand = 0;
 };
 
 class Cirulla : public QWidget
@@ -113,6 +137,11 @@ private:
     GameState state;
 
     // Layouts
+
+    QStackedWidget *stackedWidget;
+    QWidget *gameArea;
+    QWidget *scoreArea;
+
     QLabel *mazzoPreseIconArr[4];
     QLabel *avatarArr[4];
 
@@ -162,14 +191,43 @@ private:
     QLabel *mazzoScopeP3Icon;
     QLabel *mazzoP3Text;
 
+    // SCORE AREA
+
+    QGridLayout scoreGrid;
+
+    QLabel *scoreAvatar[4];
+    QLabel *labelPunti[4];
+
+    QWidget *playerArea[4];
+    QHBoxLayout *playerScoreLayout[4];
+
+    QLabel *nameLabel[4];
+    QLabel *lblScope[4];
+    QLabel *lblCarte[4];
+    QLabel *lblDenari[4];
+    QLabel *lblSettebello[4];
+    QLabel *lblPiccola[4];
+    QLabel *lblGrande[4];
+    QWidget *primieraContainer[4];
+    QHBoxLayout *primieraLayout[4];
+    QLabel *primieraThumbnails[4][4];
+    QLabel *primieraText[4];
+    QLabel *lblTotale[4];
+
+    // Variables
+
     int selectedHandCardIndex = -1;     // -1 means no selected card in hand
     QList<int> selectedTableIndices;    // index of selected cards from the table
     bool isSelectingTableCards = false; // Abilita/disabilita selezione sul tavolo
     int revealedCardIndex = -1;
     int lastPlayerToScore = -1;
+    const int ID_CARTA_NULLA = -999;
 
-    // TEST SWITCH
+    // *******TEST SWITCH********
+
     bool isTestMode = false;
+    bool botGame = false;
+    int waitTime = botGame == true ? 0 : 1000;
 
     QVector<Carta> generateShuffledDeck();
     QVector<Carta> generateTestDeck();
@@ -208,6 +266,7 @@ private:
     void resetSelection();
     void validateAndPlay();
     void makeMove(int handIndex, QList<int> &tableIndices);
+
     int numeroAssiInTavola() const;
     void updatePlayerUI(int playerIndex);
     void aggiornaMazzoPrese(PlayerState &p);
@@ -216,11 +275,16 @@ private:
     QVector<Mossa> trovaTutteLePrese(int handIndex);
     bool contieneMatta(const QVector<Carta> &tableCards);
     void aggiornaStats(int playerIndex);
-    void applyCircularMask(QLabel *label);
+    void applyRoundedCorners(QLabel *label);
 
     int calcolaValoreTattico(const Mossa &m);
 
     void handleEndOfGame();
+    Score calcolaPunteggio(const QVector<Carta> &totaleCarte, int totaleScope);
+    int valorePrimieraCarta(const Carta &carta);
+    Carta trovaCartaMigliorePerSeme(const QVector<Carta> &carteSeme);
+    void calcolaPunti(int tipoStat);
+    QString cartaSemeToString(Seme seme);
 };
 
 #endif // CIRULLA_H
