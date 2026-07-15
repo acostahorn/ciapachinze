@@ -11,6 +11,7 @@
 #include <QKeyEvent>
 #include <QLabel>
 #include <QStackedWidget>
+#include <QPushButton>
 
 enum class GameMode
 {
@@ -42,7 +43,42 @@ enum class Seme
     Fiori
 };
 
+enum GamePhase
+{
+    STATE_SELECTING_DEALER,
+    STATE_READY_TO_START
+};
+
+enum FaseBottone
+{
+    FaseAvvio,
+    FaseSmazzata,
+    DopoScopaMazziere,
+    FaseDopoBuona,
+    FaseFineTurno,
+    RitornoHomeScreen
+};
+
 // --- Core Structural Objects ---
+
+struct ProfileData
+{
+    QString name;
+    QString avatarPath;
+
+    // Statistiche persistenti
+    int partiteGiocate = 0;
+    int partiteVinte = 0;
+
+    // Helper per il calcolo percentuale
+    double getWinRate() const
+    {
+        if (partiteGiocate == 0)
+            return 0.0;
+        return (static_cast<double>(partiteVinte) / partiteGiocate) * 100.0;
+    }
+};
+
 struct Carta
 {
     int id; // Unique ID (0 to 39)
@@ -94,7 +130,9 @@ struct PlayerState
     QVector<Carta> scope;
     int totaleScope;
     bool carteScoperte = false;
-    QVector<Score> punteggi;
+    QVector<Score> punteggi = {};
+    std::vector<int> puntiMano;
+    int puntiPartita = 0;
 };
 
 struct GameConfig
@@ -102,6 +140,7 @@ struct GameConfig
     GameMode mode = GameMode::Offline;
     int humanSeatIndex = 0;
     int botCount = 3;
+    bool giocoACoppie = true;
     QVector<QString> playerNames;
 };
 
@@ -156,6 +195,13 @@ private:
 
     // --- Containers/Widgets ---
     QTextEdit *outputArea;
+
+    QFrame *infoOverlay;
+    QHBoxLayout *overlayLayout;
+
+    QLabel *infoLabel;
+    QPushButton *button;
+
     QGroupBox *tableContainer;
     QGroupBox *handContainer;
 
@@ -199,6 +245,11 @@ private:
     QLabel *labelPunti[4];
 
     QWidget *playerArea[4];
+
+    QWidget *manoArea;
+    QLabel *manoLabel;
+    QHBoxLayout *manoLayout;
+
     QHBoxLayout *playerScoreLayout[4];
 
     QLabel *nameLabel[4];
@@ -222,12 +273,22 @@ private:
     int revealedCardIndex = -1;
     int lastPlayerToScore = -1;
     const int ID_CARTA_NULLA = -999;
+    QString colBlu = "#00aaff";
+    QString colArancio = "#ffaa00";
+    bool isWaitingForBuona = false;
+    FaseBottone statoAttualeBottone = FaseAvvio;
 
     // *******TEST SWITCH********
 
     bool isTestMode = false;
     bool botGame = false;
     int waitTime = botGame == true ? 0 : 1000;
+
+    GamePhase currentGamePhase;
+
+    // ***FUNCTIONS***
+
+    void mainScreen();
 
     QVector<Carta> generateShuffledDeck();
     QVector<Carta> generateTestDeck();
@@ -236,6 +297,7 @@ private:
 
     void setupGame();
     void initialDeal();
+    void executeDeal();
     void dealNextRound();
     void showTable();
     void renderHandToLayout(const PlayerState &p, QLayout *targetLayout);
@@ -285,6 +347,13 @@ private:
     Carta trovaCartaMigliorePerSeme(const QVector<Carta> &carteSeme);
     void calcolaPunti(int tipoStat);
     QString cartaSemeToString(Seme seme);
+
+    void continueGame();
+
+    void updateOverlay(const QString &text, const QString &buttonText, bool buttonEnabled);
+    void onGlobalOverlayClicked();
+
+    void resetValoreMatta();
 };
 
 #endif // CIRULLA_H

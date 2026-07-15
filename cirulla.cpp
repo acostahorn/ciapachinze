@@ -20,6 +20,8 @@
 #include <QKeyEvent>
 #include <QPainter>
 #include <QPainterPath>
+#include <QInputDialog>
+#include <QPushButton>
 
 Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
 {
@@ -108,8 +110,32 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
     // 3. Output Area (Separate, full-width row)
     outputArea = new QTextEdit(this);
     outputArea->setReadOnly(true);
-    outputArea->setMaximumHeight(100);
+    outputArea->setMaximumHeight(10);
+    outputArea->hide();
     mainLayout->addWidget(outputArea);
+
+    infoOverlay = new QFrame(this);
+    infoOverlay->setStyleSheet("font-weight: bold; font-size: 18px;");
+
+    overlayLayout = new QHBoxLayout(infoOverlay);
+    overlayLayout->setContentsMargins(10, 0, 10, 0);
+
+    infoOverlay->setFixedHeight(70);
+
+    infoLabel = new QLabel("CIRULLA", infoOverlay);
+    button = new QPushButton("Inizia il Gioco", infoOverlay);
+
+    overlayLayout->addStretch(1);
+
+    overlayLayout->addWidget(infoLabel);
+
+    overlayLayout->addWidget(button);
+
+    overlayLayout->addStretch(1);
+
+    mainLayout->addWidget(infoOverlay);
+
+    // Game Area
 
     gameArea = new QWidget(this);
 
@@ -340,8 +366,15 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
 
     QGridLayout *scoreGrid = new QGridLayout();
 
+    manoArea = new QWidget();
+    manoLabel = new QLabel();
+    manoLabel->setAlignment(Qt::AlignCenter);
+    manoLabel->setStyleSheet("font-weight: bold; font-size: 18px;");
+    manoLayout = new QHBoxLayout(manoArea);
+
     for (int i = 0; i < 4; i++)
     {
+
         playerArea[i] = new QWidget();
         QString bgColor = (i == 0 || i == 2) ? "#001a2e" : "#2e0e00";
         QString borderColor = (i == 0 || i == 2) ? "#3db0d3" : "#d3603d";
@@ -350,6 +383,7 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
                                          .arg(borderColor));
         playerArea[i]->setMinimumSize(300, 150);
         playerScoreLayout[i] = new QHBoxLayout(playerArea[i]);
+
         scoreAvatar[i] = new QLabel();
         scoreAvatar[i]->setStyleSheet("QLabel {border: none}");
         scoreAvatar[i]->setScaledContents(true);
@@ -364,14 +398,14 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
         nameLabel[i] = new QLabel();
         nameLabel[i]->setStyleSheet("color: white;");
 
-        lblScope[i] = new QLabel("Scope: 0");
-        lblCarte[i] = new QLabel("Carte: 0");
-        lblDenari[i] = new QLabel("Denari: 0");
-        lblSettebello[i] = new QLabel("Settebello: No");
+        lblScope[i] = new QLabel("Scope: -");
+        lblCarte[i] = new QLabel("Carte: -");
+        lblDenari[i] = new QLabel("Denari: -");
+        lblSettebello[i] = new QLabel("Settebello: -");
         lblPiccola[i] = new QLabel("Piccola: -");
         lblGrande[i] = new QLabel("Grande: -");
         primieraContainer[i] = new QWidget();
-        lblTotale[i] = new QLabel("Totale: 0");
+        lblTotale[i] = new QLabel("Totale: -");
 
         dataLayout->addWidget(lblScope[i], 0, 0);
         dataLayout->addWidget(lblCarte[i], 1, 0);
@@ -397,20 +431,45 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
         playerScoreLayout[i]->addStretch();
     }
 
+    manoLayout->addWidget(manoLabel);
+    scoreGrid->addWidget(manoArea, 0, 0, 1, 2);
+
     for (int i = 0; i < 4; i++)
     {
-        int riga = (i == 0 || i == 2) ? 0 : 1;
+        int riga = (i == 0 || i == 2) ? 1 : 2;
         int colonna = (i == 0 || i == 1) ? 0 : 1;
         scoreGrid->addWidget(playerArea[i], riga, colonna);
+    }
+
+    for (int i = 0; i < 4; ++i)
+    {
+
+        primieraLayout[i] = new QHBoxLayout(primieraContainer[i]);
+        primieraText[i] = new QLabel();
+        primieraLayout[i]->setContentsMargins(0, 0, 0, 0);
+        primieraLayout[i]->setSpacing(2);
+        for (int j = 0; j < 4; ++j)
+        {
+            primieraThumbnails[i][j] = new QLabel();
+            primieraThumbnails[i][j]->setFixedSize(25, 35); // Dimensione miniatura
+            primieraThumbnails[i][j]->setScaledContents(true);
+            primieraLayout[i]->addWidget(primieraThumbnails[i][j]);
+        }
     }
 
     scoreArea->setLayout(scoreGrid);
     stackedWidget->addWidget(scoreArea);
 
     // 7. Initialization
-    setupGame();
 
-    QTimer::singleShot(0, this, &Cirulla::startGame);
+    connect(button, &QPushButton::clicked, this, &Cirulla::onGlobalOverlayClicked);
+    statoAttualeBottone = FaseBottone::FaseAvvio;
+
+    setupGame();
+}
+
+void Cirulla::mainScreen()
+{
 }
 
 void Cirulla::startGame()
@@ -420,7 +479,30 @@ void Cirulla::startGame()
     state.deck = generateShuffledDeck();
     state.dealerIndex = selectDealer();
 
-    // 2. New shuffle to start the real match
+    currentGamePhase = STATE_READY_TO_START;
+
+    // 2. Prepariamo l'interfaccia per la pausa
+    QString dealerName = state.seats[state.dealerIndex].name;
+
+    statoAttualeBottone = FaseBottone::FaseSmazzata;
+    updateOverlay(QString("%1 è il nuovo Mazziere!").arg(dealerName), "Inizia la smazzata", true);
+}
+
+void Cirulla::executeDeal()
+{
+    for (int i = 0; i < state.seats.size(); ++i)
+    {
+        if (!state.seats[i].hand.isEmpty())
+        {
+            outputArea->append("ERRORE: Tentata distribuzione con carte ancora in mano!");
+            return; // Blocca la distribuzione!
+        }
+    }
+
+    if (currentGamePhase != STATE_READY_TO_START)
+        return;
+    button->setEnabled(false);
+
     if (isTestMode)
     {
         outputArea->append("TEST TEST TEST TEST TEST");
@@ -433,14 +515,28 @@ void Cirulla::startGame()
     state.currentTurnIndex = (state.dealerIndex + 1) % state.seats.size();
 
     // 3. Deal match cards and draw hands
+    state.tableCards.clear();
     initialDeal();
+
+    for (int i = 0; i < 4; i++)
+    {
+        QString mano;
+        for (auto &c : state.seats[i].hand)
+            mano += QString::number(c.faceValue) + " ";
+        outputArea->append("DEBUG: Mano Giocatore " + QString::number(i) + ": " + mano);
+    }
+
     showHands();
     showTable();
     dealersChance();
+    processTurn();
+
+    // updateOverlay("", "", false);
 }
 
 void Cirulla::setupGame()
 {
+    state.phase = MatchPhase::Playing;
     config.mode = GameMode::Offline;
     config.humanSeatIndex = 2;
     config.playerNames = {"Baciccia", "Ugo", "Alberto", "Mussadiferro"};
@@ -478,23 +574,35 @@ void Cirulla::setupGame()
 
 void Cirulla::initialDeal()
 {
+    // RESET DI SICUREZZA: Assicuriamoci che l'indice parta da zero
+    state.deckIndex = 0;
 
-    // 1. Deal 3 cards to each player's structural hand vector
+    int playerIndex = 0; // Contatore reale per i giocatori
+
     for (auto &player : state.seats)
     {
         player.hand.clear();
         player.scope.clear();
         player.prese.clear();
         player.totaleScope = 0;
-        // Ensure hand is clean at the start of a round
 
         for (int i = 0; i < 3; ++i)
         {
             if (state.deckIndex < state.deck.size())
             {
-                player.hand.append(state.deck[state.deckIndex++]);
+                Carta c = state.deck[state.deckIndex];
+                player.hand.append(c);
+
+                // LOG CORRETTO: ora vediamo davvero chi riceve cosa
+                outputArea->append("Giocatore " + QString::number(playerIndex) +
+                                   " riceve carta ID: " + QString::number(c.id) +
+                                   " (Valore: " + QString::number(c.faceValue) +
+                                   ") | Indice: " + QString::number(state.deckIndex));
+
+                state.deckIndex++;
             }
         }
+        playerIndex++; // Incrementa l'indice del giocatore
     }
 
     // 3. Table Cards
@@ -565,6 +673,12 @@ int Cirulla::cards_sum(const QVector<Carta> &carte)
 }
 void Cirulla::dealersChance()
 {
+
+    if (state.tableCards.isEmpty())
+    {
+        outputArea->append("DEBUG: dealersChance saltato, tavolo vuoto.");
+        return;
+    }
     bool mattaPresente = contieneMatta(state.tableCards);
     int total = cards_sum(state.tableCards);
     if (mattaPresente)
@@ -581,40 +695,38 @@ void Cirulla::dealersChance()
 
     if (total == 15 || total == 30)
     {
-        // Mostriamo il messaggio immediatamente
-        QString message = (total == 15) ? "Ci sono 15 punti: scopa per il mazziere!"
-                                        : "Ci sono 30 punti: due scope per il mazziere!";
-        outputArea->append(message);
+        QString messaggio = (total == 15) ? "Scopa per il mazziere!" : "Due scope per il mazziere!";
 
-        // Usiamo un timer per eseguire la presa dopo 2 secondi (2000 millisecondi)
-        QTimer::singleShot(2000, this, [this, total]()
-                           {
-            if (total == 15) {
-                state.seats[state.dealerIndex].scope.append(state.tableCards[0]);
-                for (int i = 1; i < state.tableCards.size(); ++i) {
-                    state.seats[state.dealerIndex].prese.append(state.tableCards[i]);
-                }
-                    state.seats[state.dealerIndex].totaleScope = 1;
-                  aggiornaStats(state.dealerIndex);
-                
-            } else {
-                state.seats[state.dealerIndex].scope.append(state.tableCards[0]);
-                state.seats[state.dealerIndex].scope.append(state.tableCards[1]);
-                for (int i = 2; i < state.tableCards.size(); ++i) {
-                    state.seats[state.dealerIndex].prese.append(state.tableCards[i]);
-                }
-                    
-                    state.seats[state.dealerIndex].totaleScope = 2;
-                     aggiornaStats(state.dealerIndex);
-            
+        outputArea->append(messaggio);
+
+        if (total == 15)
+        {
+            state.seats[state.dealerIndex].scope.append(state.tableCards[0]);
+            for (int i = 1; i < state.tableCards.size(); ++i)
+            {
+                state.seats[state.dealerIndex].prese.append(state.tableCards[i]);
             }
-            
-            state.tableCards.clear();
-            showTable(); // Aggiorna il tavolo solo dopo la pausa
-            outputArea->append("Il tavolo è stato ripulito."); });
-    }
+            state.seats[state.dealerIndex].totaleScope = 1;
+            aggiornaStats(state.dealerIndex);
+        }
+        else
+        {
+            state.seats[state.dealerIndex].scope.append(state.tableCards[0]);
+            state.seats[state.dealerIndex].scope.append(state.tableCards[1]);
+            for (int i = 2; i < state.tableCards.size(); ++i)
+            {
+                state.seats[state.dealerIndex].prese.append(state.tableCards[i]);
+            }
 
-    processTurn();
+            state.seats[state.dealerIndex].totaleScope = 2;
+            aggiornaStats(state.dealerIndex);
+        }
+
+        state.tableCards.clear();
+        showTable(); // Aggiorna il tavolo solo dopo la pausa
+        outputArea->append("Il tavolo è stato ripulito.");
+        statoAttualeBottone = FaseBottone::DopoScopaMazziere;
+    }
 }
 
 void Cirulla::renderHandToLayout(const PlayerState &p, QLayout *targetLayout)
@@ -806,15 +918,15 @@ int Cirulla::selectDealer()
 
     showTable();
 
-    QString winnerMsg = QString("%1 vince il mazzo ed è il Mazziere!").arg(state.seats[active_players[0]].name);
-    outputArea->append(winnerMsg);
-    qApp->processEvents();
+    // QString winnerMsg = QString("%1 vince il mazzo ed è il Mazziere!").arg(state.seats[active_players[0]].name);
+    // outputArea->append(winnerMsg);
+    // qApp->processEvents();
 
-    state.tableCards.clear();
-    QMessageBox::information(
-        this,
-        "Estrazione Mazziere",
-        winnerMsg + "\n\nClicca OK per iniziare la smazzata.");
+    // state.tableCards.clear();
+    // QMessageBox::information(
+    //     this,
+    //     "Estrazione Mazziere",
+    //     winnerMsg + "\n\nClicca OK per iniziare la smazzata.");
 
     return active_players[0];
 }
@@ -870,15 +982,46 @@ bool Cirulla::all_cards_same(const QVector<Carta> &carte)
 
 void Cirulla::processTurn()
 {
+    if (isWaitingForBuona)
+        return;
+
     // 1. Identifichiamo il giocatore corrente
     int currentPlayerIndex = state.currentTurnIndex;
-    if (checkBuonaDaDieci(currentPlayerIndex))
+
+    if (currentPlayerIndex < 0 || currentPlayerIndex >= state.seats.size())
+        return;
+    updateOverlay("Turno: " + state.seats[currentPlayerIndex].name, "", false);
+    outputArea->append("Turno: " + state.seats[currentPlayerIndex].name);
+
+    bool isStartOfHand = (state.seats[currentPlayerIndex].hand.size() == 3);
+    bool notYetDeclared = (!state.seats[currentPlayerIndex].carteScoperte);
+
+    if (isStartOfHand && notYetDeclared)
     {
-        applyBuonaDaDieci(currentPlayerIndex);
-    }
-    else if (checkBuonaDaTre(currentPlayerIndex))
-    {
-        applyBuonaDaTre(currentPlayerIndex);
+        if (checkBuonaDaDieci(currentPlayerIndex))
+        {
+            isWaitingForBuona = true;
+            applyBuonaDaDieci(currentPlayerIndex);
+            QString nomeGiocatore = (currentPlayerIndex == config.humanSeatIndex) ? "Tu" : "Il Giocatore " + config.playerNames[currentPlayerIndex];
+            QString verbo = (currentPlayerIndex == config.humanSeatIndex) ? " hai " : " ha ";
+            QString messaggio = verbo + "bussato e " + verbo + "fatto 10 scope!";
+            statoAttualeBottone = FaseBottone::FaseDopoBuona;
+
+            updateOverlay(nomeGiocatore + messaggio, "OK", true);
+
+            return;
+        }
+        else if (checkBuonaDaTre(currentPlayerIndex))
+        {
+            isWaitingForBuona = true;
+            applyBuonaDaTre(currentPlayerIndex);
+            QString nomeGiocatore = (currentPlayerIndex == config.humanSeatIndex) ? "Tu" : "Il Giocatore " + config.playerNames[currentPlayerIndex];
+            QString verbo = (currentPlayerIndex == config.humanSeatIndex) ? " hai " : " ha ";
+            QString messaggio = verbo + "bussato e " + verbo + "fatto 3 scope!";
+            statoAttualeBottone = FaseBottone::FaseDopoBuona;
+            updateOverlay(nomeGiocatore + messaggio, "OK", true);
+            return;
+        }
     }
 
     // 2. Se è il giocatore umano (supponiamo sia sempre al seat 2)
@@ -899,19 +1042,6 @@ void Cirulla::processTurn()
             if (!mosseCarta.isEmpty())
             {
                 totaleMosseValide = true;
-                // outputArea->append(QString("Carta %1 (valore %2) può prendere:")
-                //                        .arg(i)
-                //                        .arg(miaMano[i].faceValue));
-
-                // for (const auto &m : mosseCarta)
-                // {
-                //     QString info;
-                //     for (int idx : m.tableIndices)
-                //     {
-                //         info += QString::number(state.tableCards[idx].faceValue) + " ";
-                //     }
-                //     outputArea->append("  > con: " + info);
-                // }
             }
         }
 
@@ -967,7 +1097,7 @@ bool Cirulla::eventFilter(QObject *obj, QEvent *event)
                 // Se clicco una carta diversa, aggiorno la selezione
                 if (selectedHandCardIndex != newIndex)
                 {
-                    selectedHandCardIndex = newIndex; // <--- Mancava questa riga!
+                    selectedHandCardIndex = newIndex;
                     selectedTableIndices.clear();
                     isSelectingTableCards = true;
 
@@ -998,16 +1128,10 @@ bool Cirulla::eventFilter(QObject *obj, QEvent *event)
 
 void Cirulla::playCard(int handIndex, QList<int> &tableIndices)
 {
-    int indexGiocatoreCheMuove = state.currentTurnIndex;
-
-    // 1. Esegui la mossa (questo usa state.currentTurnIndex, quindi è già corretto)
+    // 1. Esegui la mossa
     makeMove(handIndex, tableIndices);
-
-    // 2. Disabilita interazione durante l'animazione
     enableHandInteraction(false);
-    selectedHandCardIndex = -1;
-    selectedTableIndices.clear();
-    updatePlayerUI(indexGiocatoreCheMuove);
+    updatePlayerUI(state.currentTurnIndex);
 
     bool tuttiHannoFinito = true;
     for (const auto &player : state.seats)
@@ -1019,58 +1143,69 @@ void Cirulla::playCard(int handIndex, QList<int> &tableIndices)
         }
     }
 
+    // 2. Gestione fine mano
     if (tuttiHannoFinito)
     {
         if (state.deckIndex < state.deck.size())
         {
             for (auto &player : state.seats)
-            {
                 player.carteScoperte = false;
-            }
             dealNextRound();
             state.currentTurnIndex = (state.dealerIndex + 1) % state.seats.size();
             for (int i = 0; i < state.seats.size(); ++i)
-            {
                 updatePlayerUI(i);
-            }
         }
         else
         {
-            handleEndOfGame();
+            // l'ultimo svuota il tavolo
+
+            PlayerState &ultimoAPrendere = state.seats[lastPlayerToScore];
+            outputArea->append("Le carte rimaste sul tavolo vanno all'ultimo giocatore che ha preso: " + config.playerNames[ultimoAPrendere.id]);
+
+            for (auto &carta : state.deck)
+            {
+                if (carta.id == 16)
+                {
+                    carta.faceValue = 7;
+                    break;
+                }
+            }
+
+            resetValoreMatta();
+
+            int lastOneId = ultimoAPrendere.id;
+
+            for (auto &card : state.tableCards)
+            {
+                // outputArea->append("Carta aggiunta: " + card.faceValue);
+                ultimoAPrendere.prese.append(card);
+            }
+
+            QTimer::singleShot(2000, this, [=]()
+                               {
+    PlayerState &player = state.seats[lastOneId];
+    aggiornaMazzoPrese(player);
+
+    state.tableCards.clear();
+    showTable(); });
+
+            QTimer::singleShot(2000, this, [=]()
+                               { handleEndOfGame(); });
+
+            return; // Partita finita, non chiamare processTurn
         }
     }
     else
     {
+        // 3. PASSAGGIO TURNO: Solo questo!
+        selectedHandCardIndex = -1;
+        selectedTableIndices.clear();
         state.currentTurnIndex = (state.currentTurnIndex + 1) % state.seats.size();
-        // --- NUOVA LOGICA: Controllo Buone PRIMA della mossa ---
-        // Verifichiamo solo se il giocatore ha 3 carte (inizio mano)
-        // e se non ha ancora dichiarato nulla in questa smazzata.
-        if (state.seats[state.currentTurnIndex].hand.size() == 3 &&
-            !state.seats[state.currentTurnIndex].carteScoperte)
-        {
-            if (checkBuonaDaDieci(state.currentTurnIndex))
-            {
-                applyBuonaDaDieci(state.currentTurnIndex);
-                // Qui richiami la tua notifica soft (non bloccante)
-            }
-            else if (checkBuonaDaTre(state.currentTurnIndex))
-            {
-                applyBuonaDaTre(state.currentTurnIndex);
-                // Qui richiami la tua notifica soft (non bloccante)
-            }
-        }
+        outputArea->append("DEBUG: Turno passato a " + state.seats[state.currentTurnIndex].name);
     }
 
-    //  Prossima mossa
-    if (isCurrentPlayerBot())
-    {
-        enableHandInteraction(false);
-        QTimer::singleShot(waitTime, this, &Cirulla::botPlay);
-    }
-    else
-    {
-        enableHandInteraction(true);
-    }
+    // 4. L'UNICA COSA DA FARE: chiamare il regista
+    processTurn();
 }
 
 void Cirulla::makeMove(int handIndex, QList<int> &tableIndices)
@@ -1147,6 +1282,8 @@ void Cirulla::makeMove(int handIndex, QList<int> &tableIndices)
 
 void Cirulla::botPlay()
 {
+    if (isWaitingForBuona)
+        return;
     PlayerState &bot = state.seats[state.currentTurnIndex];
     QVector<Mossa> mosseValide;
 
@@ -1268,8 +1405,15 @@ void Cirulla::validateAndPlay()
 
 void Cirulla::keyPressEvent(QKeyEvent *event)
 {
+    if (state.phase != MatchPhase::Playing)
+    {
+        QWidget::keyPressEvent(event);
+        return;
+    }
+
     if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter)
     {
+
         if (selectedHandCardIndex != -1)
         {
             // Caso 1: Hai selezionato una presa
@@ -1328,7 +1472,24 @@ QVector<Mossa> Cirulla::possibiliPrese(int handIndex)
 }
 QVector<Mossa> Cirulla::trovaTutteLePrese(int handIndex)
 {
+
+    // 1. Controllo di sicurezza: indice giocatore valido?
+    if (state.currentTurnIndex < 0 || state.currentTurnIndex >= state.seats.size())
+    {
+        return QVector<Mossa>();
+    }
+
     PlayerState &giocatore = state.seats[state.currentTurnIndex];
+
+    // 2. PROTEZIONE CRITICA: Indice mano valido? Mano non vuota?
+    if (handIndex < 0 || handIndex >= giocatore.hand.size())
+    {
+        outputArea->append(QString("ERRORE: Accesso a indice mano %1 non valido (Size: %2)")
+                               .arg(handIndex)
+                               .arg(giocatore.hand.size()));
+        return QVector<Mossa>();
+    }
+
     Carta c = giocatore.hand[handIndex];
     bool isMatta = c.isMatta();
     int valore = c.faceValue;
@@ -1370,24 +1531,24 @@ QVector<Mossa> Cirulla::trovaTutteLePrese(int handIndex)
         }
 
         // LOGICA UNIFICATA
-        if (isMatta)
+        // if (isMatta)
+        // {
+        //     // La matta prende se sommaTavolo è un valore che lei può "coprire"
+        //     // Caso 1: Presa normale (sommaTavolo tra 1 e 10)
+        //     // Caso 2: Presa 15 (sommaTavolo tra 5 e 14, perché 15 - [1..10] = [14..5])
+        //     if (sommaTavolo >= 1 && sommaTavolo <= 14)
+        //     {
+        //         prese.append({handIndex, combo});
+        //     }
+        // }
+        // else
+        // {
+        // Logica per carte normali
+        if (sommaTavolo == valore || (sommaTavolo + valore == 15))
         {
-            // La matta prende se sommaTavolo è un valore che lei può "coprire"
-            // Caso 1: Presa normale (sommaTavolo tra 1 e 10)
-            // Caso 2: Presa 15 (sommaTavolo tra 5 e 14, perché 15 - [1..10] = [14..5])
-            if (sommaTavolo >= 1 && sommaTavolo <= 14)
-            {
-                prese.append({handIndex, combo});
-            }
+            prese.append({handIndex, combo});
         }
-        else
-        {
-            // Logica per carte normali
-            if (sommaTavolo == valore || (sommaTavolo + valore == 15))
-            {
-                prese.append({handIndex, combo});
-            }
-        }
+        // }
     }
     return prese;
 }
@@ -1509,6 +1670,7 @@ void Cirulla::dealNextRound()
 {
     outputArea->append(QString("indice delle carte: %1").arg(state.deckIndex));
     // Distribuisci 3 carte a ciascuno
+
     for (auto &player : state.seats)
     {
         for (int i = 0; i < 3; ++i)
@@ -1519,9 +1681,7 @@ void Cirulla::dealNextRound()
             }
         }
     }
-    // Nota: NON puliamo le prese e le scope qui!
 
-    // Aggiorniamo l'interfaccia per mostrare le nuove carte
     for (int i = 0; i < state.seats.size(); ++i)
     {
         updatePlayerUI(i);
@@ -1531,23 +1691,6 @@ void Cirulla::dealNextRound()
 void Cirulla::handleEndOfGame()
 {
 
-    PlayerState &ultimoAPrendere = state.seats[lastPlayerToScore];
-    outputArea->append("Le carte rimaste sul tavolo vanno all'ultimo giocatore che ha preso: " + config.playerNames[ultimoAPrendere.id]);
-
-    int lastOneId = ultimoAPrendere.id;
-
-    for (auto &card : state.tableCards)
-    {
-        // outputArea->append("Carta aggiunta: " + card.faceValue);
-        ultimoAPrendere.prese.append(card);
-    }
-
-    QTimer::singleShot(4000, this, [=]()
-                       {
-    PlayerState &player = state.seats[lastOneId];
-    aggiornaMazzoPrese(player);
-    state.tableCards.clear();
-    showTable(); });
     for (int i = 0; i < 4; i++)
     {
         nameLabel[i]->setText(config.playerNames[i]);
@@ -1558,15 +1701,43 @@ void Cirulla::handleEndOfGame()
         applyRoundedCorners(scoreAvatar[i]);
     }
 
+    state.phase = MatchPhase::Scoring;
+
     // visualizza schermo punteggi
-    QTimer::singleShot(4000, this, [=]()
-                       { stackedWidget->setCurrentIndex(1); });
+
+    stackedWidget->setCurrentIndex(1);
     outputArea->clear();
 
-    for (auto &player : state.seats)
+    QString manoText = QString("MANO N. %1").arg(state.hand + 1);
+
+    if (config.giocoACoppie)
     {
-        QVector<Carta> totaleCarte = player.prese + player.scope;
-        player.punteggi.append(calcolaPunteggio(totaleCarte, player.totaleScope));
+        manoText += QString(" - <font color='%1'>%2</font> e <font color='%1'>%3</font> vs <font color='%4'>%5</font> e <font color='%4'>%6</font>")
+                        .arg(colBlu)
+                        .arg(config.playerNames[0])
+                        .arg(config.playerNames[2])
+                        .arg(colArancio)
+                        .arg(config.playerNames[1])
+                        .arg(config.playerNames[3]);
+    }
+
+    manoLabel->setText(manoText);
+
+    if (config.giocoACoppie)
+    {
+        for (int i = 0; i < 2; ++i)
+        {
+            QVector<Carta> totaleCarte = state.seats[i].prese + state.seats[i + 2].prese + state.seats[i].scope + state.seats[i + 2].scope;
+            state.seats[i].punteggi.append(calcolaPunteggio(totaleCarte, state.seats[i].totaleScope + state.seats[i + 2].totaleScope));
+        }
+    }
+    else
+    {
+        for (auto &player : state.seats)
+        {
+            QVector<Carta> totaleCarte = player.prese + player.scope;
+            player.punteggi.append(calcolaPunteggio(totaleCarte, player.totaleScope));
+        }
     }
 
     // Carte, denari e primiera
@@ -1578,10 +1749,26 @@ void Cirulla::handleEndOfGame()
 
     // VISUALIZZAZIONE
 
-    outputArea->append("Primiera:");
-
     for (int i = 0; i < 4; ++i)
     {
+        // Clear the text label
+        primieraText[i]->clear();
+
+        // Clear all thumbnails
+        for (int j = 0; j < 4; ++j)
+        {
+            primieraThumbnails[i][j]->clear();
+            primieraThumbnails[i][j]->hide(); // Optional: hides the empty slot
+        }
+    }
+
+    outputArea->append("Primiera:");
+
+    int limite = config.giocoACoppie ? 2 : 4;
+
+    for (int i = 0; i < limite; ++i)
+    {
+
         lblScope[i]->setStyleSheet("color: #2ecc71; font-weight: bold;");
         lblScope[i]->setText(QString("Scope: %1").arg(state.seats[i].punteggi[state.hand].scope));
 
@@ -1628,18 +1815,8 @@ void Cirulla::handleEndOfGame()
 
         // PRIMIERA
 
-        QHBoxLayout *primieraLayout = new QHBoxLayout(primieraContainer[i]);
-        primieraText[i] = new QLabel();
-        // primieraText[i]->setStyleSheet("border: none");
-        primieraLayout->setContentsMargins(0, 0, 0, 0);
-        primieraLayout->setSpacing(2);
-
         for (int j = 0; j < 4; ++j)
         {
-            primieraThumbnails[i][j] = new QLabel();
-            primieraThumbnails[i][j]->setFixedSize(25, 35); // Dimensione miniatura
-            primieraThumbnails[i][j]->setScaledContents(true);
-            primieraLayout->addWidget(primieraThumbnails[i][j]);
 
             QString cardPath =
                 QString("cards/%1.png").arg(state.seats[i].punteggi[state.hand].primieraCarte[j].id + 1);
@@ -1649,13 +1826,17 @@ void Cirulla::handleEndOfGame()
 
             outputArea->insertPlainText(info);
 
-            primieraThumbnails[i][j]->setPixmap(cardPath);
-            primieraThumbnails[i][j]->show();
+            if (state.seats[i].punteggi[state.hand].primieraCarte[j].faceValue > 0)
+            {
+
+                primieraThumbnails[i][j]->setPixmap(cardPath);
+                primieraThumbnails[i][j]->show();
+            }
         }
 
         outputArea->append("");
 
-        primieraLayout->addWidget(primieraText[i]);
+        primieraLayout[i]->addWidget(primieraText[i]);
 
         if (state.seats[i].punteggi[state.hand].primieraPunto == 1)
         {
@@ -1674,7 +1855,7 @@ void Cirulla::handleEndOfGame()
         if (state.seats[i].punteggi[state.hand].piccola > 0)
         {
             // Il giocatore ha la piccola
-            lblPiccola[i]->setText(QString("Piccola: %1 punti!)").arg(state.seats[i].punteggi[state.hand].piccola));
+            lblPiccola[i]->setText(QString("Piccola: %1 punti!").arg(state.seats[i].punteggi[state.hand].piccola));
             lblPiccola[i]->setStyleSheet("color: #2ecc71; font-weight: bold;"); // Verde brillante
         }
         else
@@ -1688,7 +1869,7 @@ void Cirulla::handleEndOfGame()
         if (state.seats[i].punteggi[state.hand].grande > 0)
         {
             // Il giocatore ha la grande
-            lblGrande[i]->setText(QString("Grande: %1 punti!)").arg(state.seats[i].punteggi[state.hand].grande));
+            lblGrande[i]->setText(QString("Grande: %1 punti!").arg(state.seats[i].punteggi[state.hand].grande));
             lblGrande[i]->setStyleSheet("color: #2ecc71; font-weight: bold;"); // Verde brillante
         }
         else
@@ -1697,29 +1878,110 @@ void Cirulla::handleEndOfGame()
             lblGrande[i]->setText("Grande: -");
         }
 
-        int totale = state.seats[i].punteggi[state.hand].calcolaTotale();
-        lblTotale[i]->setText(QString("Totale: %1").arg(totale));
+        state.seats[i].puntiMano.push_back(state.seats[i].punteggi[state.hand].calcolaTotale());
+        if (config.giocoACoppie)
+        {
+            state.seats[i + 2].puntiMano.push_back(state.seats[i].punteggi[state.hand].calcolaTotale());
+        }
+        lblTotale[i]->setText(QString("Totale: %1").arg(state.seats[i].puntiMano[state.hand]));
         lblTotale[i]->setStyleSheet("color: #dc046d; font-weight: bold;");
+        if (config.giocoACoppie)
+        {
+            lblTotale[i + 2]->setText(QString("Totale: %1").arg(state.seats[i + 2].puntiMano[state.hand]));
+            lblTotale[i + 2]->setStyleSheet("color: #dc046d; font-weight: bold;");
+        }
     }
 
-    ++state.hand;
-    /* * PSEUDOCODICE PER IL RESET E NUOVA PARTITA:
-     * * 1. RESET_GIOCATORI:
-     * Per ogni giocatore in state.seats:
-     * - Svuota il vettore 'prese'.
-     * - Svuota il vettore 'scope'.
-     * - Azzera 'totaleScope' (o aggiornalo se è un contatore cumulativo).
-     * - Azzera il numero di carte in mano (o prepara il nuovo mazzo).
-     * * 2. RESET_TAVOLO:
-     * - Svuota state.tableCards.
-     * - Resetta il deck di gioco (mescola e prepara).
-     * * 3. UI_CLEANUP:
-     * - Rimuovi fisicamente le icone carte dagli oggetti grafici.
-     * - Aggiorna i nomi/avatar (che devono restare visibili).
-     * - Richiama showTable() per visualizzare il tavolo vuoto/nuovo.
-     * * 4. AVVIO:
-     * - startGame() // Inizia la distribuzione delle nuove carte.
-     */
+    if (config.giocoACoppie)
+    {
+        if (state.seats[0].puntiMano[state.hand] > state.seats[1].puntiMano[state.hand])
+        {
+            ++state.seats[0].puntiPartita;
+            ++state.seats[2].puntiPartita;
+        }
+        else if (state.seats[0].puntiMano[state.hand] < state.seats[1].puntiMano[state.hand])
+        {
+            ++state.seats[1].puntiPartita;
+            ++state.seats[3].puntiPartita;
+        }
+    }
+    else
+    {
+        for (int i = 0; i < 4; i++)
+        {
+            state.seats[i].puntiPartita += state.seats[i].puntiMano[state.hand];
+        }
+    }
+
+    // visualizza punteggio mano
+    for (int i = 0; i < 4; i++)
+    {
+        labelPunti[i]->setText(QString("Punti: %1")
+                                   .arg(state.seats[i].puntiPartita));
+    }
+
+    if (config.giocoACoppie)
+    {
+        // Recupera i totali attuali (che sappiamo essere aggiornati correttamente)
+        int puntiSquadraA = state.seats[0].puntiPartita;
+        int puntiSquadraB = state.seats[1].puntiPartita;
+
+        // Controllo se qualcuno ha vinto la PARTITA (raggiunto i 2 punti)
+        if (puntiSquadraA >= 2 || puntiSquadraB >= 2)
+        {
+            QString vincitore = (puntiSquadraA >= 2) ? config.playerNames[0] + " e " + config.playerNames[2]
+                                                     : config.playerNames[1] + " e " + config.playerNames[3];
+            QString colore = (puntiSquadraA >= 2) ? colBlu : colArancio;
+
+            QString winnerText = QString("<font size=18>Vincono</font> <font color='%1' size=20>%2 !</font>")
+                                     .arg(colore)
+                                     .arg(vincitore);
+
+            updateOverlay(winnerText, "Fine Partita", true);
+            statoAttualeBottone = FaseBottone::RitornoHomeScreen;
+        }
+        else
+        {
+            ++state.hand;
+            state.phase = MatchPhase::Playing;
+
+            // Connect the button's clicked signal to your continueGame function
+            updateOverlay(" CONTINUA IL GIOCO", "CONTINUA", true);
+            statoAttualeBottone = FaseBottone::FaseFineTurno;
+
+            outputArea->append("Punteggio parziale: Squadra A " + QString::number(puntiSquadraA) +
+                               " - Squadra B " + QString::number(puntiSquadraB));
+        }
+    }
+}
+
+void Cirulla::continueGame()
+{
+    // HERE I DECIDE IF SOMEONE HAS WON
+
+    state.dealerIndex = (state.dealerIndex + 1) % 4;
+
+    selectedHandCardIndex = -1;
+    selectedTableIndices.clear();
+    isWaitingForBuona = false;
+
+    for (int i = 0; i < state.seats.size(); ++i)
+    {
+        state.seats[i].prese.clear();
+        state.seats[i].scope.clear();
+        state.seats[i].hand.clear();
+        state.seats[i].totaleScope = 0;
+        aggiornaStats(i);
+        mazzoScopeIconArr[i]->clear();
+        mazzoPreseIconArr[i]->clear();
+        state.seats[i].carteScoperte = false;
+    }
+
+    stackedWidget->setCurrentIndex(0);
+    showTable();
+    showHands();
+    statoAttualeBottone = FaseSmazzata;
+    updateOverlay(QString("%1 è il nuovo Mazziere!").arg(state.seats[state.dealerIndex].name), "Inizia la smazzata", true);
 }
 
 void Cirulla::aggiornaMazzoPrese(PlayerState &p)
@@ -1751,45 +2013,54 @@ bool Cirulla::contieneMatta(const QVector<Carta> &tableCards)
 
 bool Cirulla::checkBuonaDaDieci(int playerIndex)
 {
+    QVector<Carta> &mano = state.seats[playerIndex].hand; // Usa riferimento per modificare
 
-    QVector<Carta> carteInMano = state.seats[playerIndex].hand;
+    outputArea->append(QString("DEBUG: Confronto mano %1 | Valori: %2, %3, %4")
+                           .arg(state.seats[playerIndex].name)
+                           .arg(mano[0].faceValue)
+                           .arg(mano[1].faceValue)
+                           .arg(mano[2].faceValue));
 
-    // Safety check: non eseguire se non siamo nelle condizioni giuste
-    if (state.seats[playerIndex].carteScoperte)
-    {
+    if (state.seats[playerIndex].carteScoperte || mano.size() != 3)
         return false;
-    }
-    if (carteInMano.size() != 3)
-        return false;
 
-    if (contieneMatta(carteInMano))
+    if (contieneMatta(mano))
     {
-        int start = 1;
-        Carta test = carteInMano[0];
-        if (test.id == 16)
+        int indexMatta = -1;
+        int indexCarta1 = -1;
+        int indexCarta2 = -1;
+
+        // Identifica gli indici
+        for (int i = 0; i < 3; ++i)
         {
-            start = 2;
-            test = carteInMano[1];
+            if (mano[i].id == 16)
+                indexMatta = i;
+            else if (indexCarta1 == -1)
+                indexCarta1 = i;
+            else
+                indexCarta2 = i;
         }
-        for (int i = start; i < 3; i++)
+
+        // Verifica se le due carte rimaste sono uguali
+        if (mano[indexCarta1].faceValue == mano[indexCarta2].faceValue)
         {
-            if (carteInMano[i].faceValue == test.faceValue)
-            {
-                return true;
-            }
+            // La matta assume il valore delle altre due
+            mano[indexMatta].faceValue = mano[indexCarta1].faceValue;
+            return true;
         }
     }
-    else if (all_cards_same(carteInMano))
+    else if (all_cards_same(mano))
     {
         return true;
     }
+
     return false;
 }
 
 bool Cirulla::checkBuonaDaTre(int playerIndex)
 {
 
-    QVector<Carta> carteInMano = state.seats[playerIndex].hand;
+    QVector<Carta> &carteInMano = state.seats[playerIndex].hand;
     // Safety check: non eseguire se non siamo nelle condizioni giuste
     if (state.seats[playerIndex].carteScoperte)
     {
@@ -1799,10 +2070,33 @@ bool Cirulla::checkBuonaDaTre(int playerIndex)
     int total = cards_sum(carteInMano);
     if (mattaPresente && total <= 15)
     {
+        int indexMatta = -1;
+        for (int i = 0; i < carteInMano.size(); ++i)
+            if (carteInMano[i].id == 16)
+                indexMatta = i;
+        int valoreScelto;
 
-        return true;
+        if (playerIndex == config.humanSeatIndex)
+        {
+            do
+            {
+                valoreScelto = QInputDialog::getInt(nullptr, "Buona da tre",
+                                                    "Scegli un valore per la matta (1-6) tale che la somma sia <= 9:",
+                                                    1, 1, 6, 1);
+
+                carteInMano[indexMatta].faceValue = valoreScelto;
+
+            } while (cards_sum(carteInMano) > 9);
+        }
+        else
+        {
+
+            carteInMano[indexMatta].faceValue = 1;
+            return true;
+        }
     }
 
+    // caso semplice senza matta
     else if (total <= 9)
         return true;
 
@@ -1811,40 +2105,35 @@ bool Cirulla::checkBuonaDaTre(int playerIndex)
 
 void Cirulla::applyBuonaDaDieci(int playerIndex)
 {
-    {
-        state.seats[playerIndex].carteScoperte = true;
-        state.seats[playerIndex].totaleScope += 10;
-        aggiornaStats(playerIndex);
-        showHands();
-        QString nomeGiocatore = (playerIndex == config.humanSeatIndex) ? "Tu" : "Il Giocatore " + config.playerNames[playerIndex];
-        QString verbo = (playerIndex == config.humanSeatIndex) ? " hai " : " ha ";
-        QString messaggio = verbo + "bussato e " + verbo + "fatto 10 scope!";
-        QMessageBox msgBox;
-        msgBox.setWindowTitle("Buona da 10!");
-        msgBox.setText(nomeGiocatore + messaggio);
-        msgBox.setIcon(QMessageBox::Information);
-        msgBox.setStandardButtons(QMessageBox::Ok);
-        msgBox.exec(); // Questo blocca l'esecuzione finche' non si preme OK
-    }
+
+    state.seats[playerIndex].carteScoperte = true;
+    state.seats[playerIndex].totaleScope += 10;
+    aggiornaStats(playerIndex);
+    showHands();
+    isWaitingForBuona = true;
 }
 
 void Cirulla::applyBuonaDaTre(int playerIndex)
 {
+    outputArea->append("--- START BUONA DA TRE ---");
+    outputArea->append("Giocatore che accusa:" + state.seats[playerIndex].name);
+    outputArea->append("Carte in mano (prima della modifica):");
+    for (auto &c : state.seats[playerIndex].hand)
+    {
+        outputArea->append(QString("ID: %1 Valore: %2").arg(c.id).arg(c.faceValue));
+    }
+
+    if (playerIndex < 0 || playerIndex >= state.seats.size())
+    {
+        outputArea->append("ERRORE CRITICO: Indice giocatore non valido!");
+        return;
+    }
     {
         state.seats[playerIndex].carteScoperte = true;
         state.seats[playerIndex].totaleScope += 3;
         aggiornaStats(playerIndex);
         showHands();
-
-        QString nomeGiocatore = (playerIndex == config.humanSeatIndex) ? "Tu" : "Il Giocatore " + config.playerNames[playerIndex];
-        QString verbo = (playerIndex == config.humanSeatIndex) ? " hai " : " ha ";
-        QString messaggio = verbo + "bussato e " + verbo + "fatto 3 scope!";
-        QMessageBox msgBox;
-        msgBox.setWindowTitle("Barsega!");
-        msgBox.setText(nomeGiocatore + messaggio);
-        msgBox.setIcon(QMessageBox::Information);
-        msgBox.setStandardButtons(QMessageBox::Ok);
-        msgBox.exec(); // Questo blocca l'esecuzione finche' non si preme OK
+        isWaitingForBuona = true;
     }
 }
 
@@ -2078,8 +2367,12 @@ void Cirulla::calcolaPunti(int tipoStat)
     int conteggioMassimi = 0;
 
     // 1. Trova il massimo e conta quanti lo hanno
-    for (const auto &giocatore : state.seats)
+    int limite = config.giocoACoppie ? 2 : 4;
+
+    for (int i = 0; i < limite; i++)
     {
+        PlayerState &giocatore = state.seats[i];
+
         int valore = (tipoStat == 0) ? giocatore.punteggi[state.hand].carte : (tipoStat == 1) ? giocatore.punteggi[state.hand].denari
                                                                                               : giocatore.punteggi[state.hand].primieraValore;
 
@@ -2095,8 +2388,9 @@ void Cirulla::calcolaPunti(int tipoStat)
     }
 
     // 2. Assegna il punto solo se c'è un vincitore unico
-    for (auto &giocatore : state.seats)
+    for (int i = 0; i < limite; i++)
     {
+        PlayerState &giocatore = state.seats[i];
         int valore = (tipoStat == 0) ? giocatore.punteggi[state.hand].carte : (tipoStat == 1) ? giocatore.punteggi[state.hand].denari
                                                                                               : giocatore.punteggi[state.hand].primieraValore;
 
@@ -2125,6 +2419,99 @@ QString Cirulla::cartaSemeToString(Seme seme)
         return "Fiori";
     default:
         return "Sconosciuto";
+    }
+}
+
+void Cirulla::updateOverlay(const QString &text, const QString &buttonText, bool buttonEnabled)
+{
+    // Aggiorna il testo
+    infoLabel->setText(text);
+
+    // Abilita o disabilita il bottone
+    button->setEnabled(buttonEnabled);
+    button->setText(buttonText);
+
+    // Opzionale: cambia visibilità se necessario
+    if (!buttonEnabled)
+    {
+        button->hide(); // Nasconde se non serve
+    }
+    else
+    {
+        button->show(); // Mostra se serve
+    }
+}
+
+void Cirulla::onGlobalOverlayClicked()
+{
+    updateOverlay("", "", false);
+
+    switch (statoAttualeBottone)
+    {
+    case FaseAvvio:
+        // Logica per avviare la partita
+        startGame();
+        break;
+
+    case FaseDopoBuona:
+        outputArea->append("DEBUG: Buona confermata, riprendiamo il turno.");
+        isWaitingForBuona = false;
+
+        // 1. Aggiorna il turno
+
+        // 2. Aggiorna la vista
+        showHands();
+
+        // 3. NON chiamare processTurn()!
+        // Lascia che sia il giocatore (o il timer del bot) a innescare la mossa
+        // tramite un click o la pressione di un tasto.
+        // Se è il turno del bot, usa un timer per farlo giocare tra un secondo.
+        if (state.seats[state.currentTurnIndex].type == SeatType::Bot)
+            ;
+        {
+            QTimer::singleShot(1000, this, &Cirulla::processTurn);
+        }
+        break;
+
+    case FaseSmazzata:
+        executeDeal();
+        break;
+
+    case DopoScopaMazziere:
+        processTurn();
+        break;
+
+    case FaseFineTurno:
+        // Logica per passare al prossimo giocatore
+        continueGame();
+        break;
+    case RitornoHomeScreen:
+        mainScreen();
+        break;
+    }
+}
+
+void Cirulla::resetValoreMatta()
+{
+    // Resetta nel mazzo (se necessario)
+    for (auto &carta : state.deck)
+    {
+        if (carta.id == 16)
+            carta.faceValue = 7;
+    }
+
+    // Resetta negli hands, prese e scope di tutti i giocatori
+    for (int i = 0; i < state.seats.size(); ++i)
+    {
+        for (auto &carta : state.seats[i].hand)
+            if (carta.id == 16)
+                carta.faceValue = 7;
+        for (auto &carta : state.seats[i].prese)
+            if (carta.id == 16)
+                carta.faceValue = 7;
+        for (auto &carta : state.seats[i].scope)
+            if (carta.id == 16)
+                carta.faceValue = 7;
     }
 }
 
