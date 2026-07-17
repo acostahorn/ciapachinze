@@ -536,17 +536,38 @@ void Cirulla::executeDeal()
 
 void Cirulla::setupGame()
 {
+    ProfileData baciccia = {
+        name : "Baciccia",
+        avatarPath : "avatars/Baciccia.png",
+        isHuman : false
+    };
+    ProfileData ugo = {
+        name : "Ugo",
+        avatarPath : "avatars/Ugo.png",
+        isHuman : false
+    };
+    ProfileData alberto = {
+        name : "Alberto",
+        avatarPath : "avatars/Alberto.png",
+        isHuman : true
+    };
+    ProfileData mussadiferro = {
+        name : "Mussadiferro",
+        avatarPath : "avatars/Mussadiferro.png",
+        isHuman : false
+    };
+
     state.phase = MatchPhase::Playing;
     config.mode = GameMode::Offline;
     config.humanSeatIndex = 2;
-    config.playerNames = {"Baciccia", "Ugo", "Alberto", "Mussadiferro"};
-    state.seats.clear();
+    config.players = {baciccia, ugo, alberto, mussadiferro};
+
     for (int i = 0; i < 4; ++i)
     {
         PlayerState p;
         p.id = i;
         p.totaleScope = 0;
-        QString avatarPath = "avatars/" + config.playerNames[i] + ".png";
+        QString avatarPath = config.players[i].avatarPath;
         QPixmap cardImage(avatarPath);
 
         if (avatarArr[i])
@@ -558,13 +579,13 @@ void Cirulla::setupGame()
 
         if (i == config.humanSeatIndex && botGame == false)
         {
-            p.name = config.playerNames[i] + "(tu)";
+            p.name = config.players[i].name + "(tu)";
             p.type = SeatType::Human;
             p.carteScoperte = false;
         }
         else
         {
-            p.name = config.playerNames[i];
+            p.name = config.players[i].name;
             p.type = SeatType::Bot;
         }
         state.seats.append(p);
@@ -1002,7 +1023,7 @@ void Cirulla::processTurn()
         {
             isWaitingForBuona = true;
             applyBuonaDaDieci(currentPlayerIndex);
-            QString nomeGiocatore = (currentPlayerIndex == config.humanSeatIndex) ? "Tu" : "Il Giocatore " + config.playerNames[currentPlayerIndex];
+            QString nomeGiocatore = (currentPlayerIndex == config.humanSeatIndex) ? "Tu" : "Il Giocatore " + config.players[currentPlayerIndex].name;
             QString verbo = (currentPlayerIndex == config.humanSeatIndex) ? " hai " : " ha ";
             QString messaggio = verbo + "bussato e " + verbo + "fatto 10 scope!";
             statoAttualeBottone = FaseBottone::FaseDopoBuona;
@@ -1015,7 +1036,7 @@ void Cirulla::processTurn()
         {
             isWaitingForBuona = true;
             applyBuonaDaTre(currentPlayerIndex);
-            QString nomeGiocatore = (currentPlayerIndex == config.humanSeatIndex) ? "Tu" : "Il Giocatore " + config.playerNames[currentPlayerIndex];
+            QString nomeGiocatore = (currentPlayerIndex == config.humanSeatIndex) ? "Tu" : "Il Giocatore " + config.players[currentPlayerIndex].name;
             QString verbo = (currentPlayerIndex == config.humanSeatIndex) ? " hai " : " ha ";
             QString messaggio = verbo + "bussato e " + verbo + "fatto 3 scope!";
             statoAttualeBottone = FaseBottone::FaseDopoBuona;
@@ -1160,7 +1181,7 @@ void Cirulla::playCard(int handIndex, QList<int> &tableIndices)
             // l'ultimo svuota il tavolo
 
             PlayerState &ultimoAPrendere = state.seats[lastPlayerToScore];
-            outputArea->append("Le carte rimaste sul tavolo vanno all'ultimo giocatore che ha preso: " + config.playerNames[ultimoAPrendere.id]);
+            outputArea->append("Le carte rimaste sul tavolo vanno all'ultimo giocatore che ha preso: " + config.players[ultimoAPrendere.id].name);
 
             for (auto &carta : state.deck)
             {
@@ -1693,8 +1714,8 @@ void Cirulla::handleEndOfGame()
 
     for (int i = 0; i < 4; i++)
     {
-        nameLabel[i]->setText(config.playerNames[i]);
-        QString avatarPath = "avatars/" + config.playerNames[i] + ".png";
+        nameLabel[i]->setText(config.players[i].name);
+        QString avatarPath = "avatars/" + config.players[i].name + ".png";
         QPixmap cardImage(avatarPath);
 
         scoreAvatar[i]->setPixmap(cardImage.scaled(120, 140, Qt::KeepAspectRatio, Qt::SmoothTransformation));
@@ -1714,11 +1735,11 @@ void Cirulla::handleEndOfGame()
     {
         manoText += QString(" - <font color='%1'>%2</font> e <font color='%1'>%3</font> vs <font color='%4'>%5</font> e <font color='%4'>%6</font>")
                         .arg(colBlu)
-                        .arg(config.playerNames[0])
-                        .arg(config.playerNames[2])
+                        .arg(config.players[0].name)
+                        .arg(config.players[2].name)
                         .arg(colArancio)
-                        .arg(config.playerNames[1])
-                        .arg(config.playerNames[3]);
+                        .arg(config.players[1].name)
+                        .arg(config.players[3].name);
     }
 
     manoLabel->setText(manoText);
@@ -1920,6 +1941,11 @@ void Cirulla::handleEndOfGame()
                                    .arg(state.seats[i].puntiPartita));
     }
 
+    for (int i = 0; i < 4; i++)
+    {
+        ++config.players[i].partiteGiocate;
+    }
+
     if (config.giocoACoppie)
     {
         // Recupera i totali attuali (che sappiamo essere aggiornati correttamente)
@@ -1929,8 +1955,18 @@ void Cirulla::handleEndOfGame()
         // Controllo se qualcuno ha vinto la PARTITA (raggiunto i 2 punti)
         if (puntiSquadraA >= 2 || puntiSquadraB >= 2)
         {
-            QString vincitore = (puntiSquadraA >= 2) ? config.playerNames[0] + " e " + config.playerNames[2]
-                                                     : config.playerNames[1] + " e " + config.playerNames[3];
+            if (puntiSquadraA >= 2)
+            {
+                ++config.players[0].partiteVinte;
+                ++config.players[2].partiteVinte;
+            }
+            else
+            {
+                ++config.players[1].partiteVinte;
+                ++config.players[3].partiteVinte;
+            }
+            QString vincitore = (puntiSquadraA >= 2) ? config.players[0].name + " e " + config.players[2].name
+                                                     : config.players[1].name + " e " + config.players[3].name;
             QString colore = (puntiSquadraA >= 2) ? colBlu : colArancio;
 
             QString winnerText = QString("<font size=18>Vincono</font> <font color='%1' size=20>%2 !</font>")
@@ -1938,7 +1974,10 @@ void Cirulla::handleEndOfGame()
                                      .arg(vincitore);
 
             updateOverlay(winnerText, "Fine Partita", true);
+
+            // fine gioco a coppie - ritorno alla schermata di partenza e trasmetti i nuovi dati giocatori
             statoAttualeBottone = FaseBottone::RitornoHomeScreen;
+            emit gameFinished(config.players); // Passi i profili aggiornati alla HomeScreen
         }
         else
         {
@@ -1953,12 +1992,63 @@ void Cirulla::handleEndOfGame()
                                " - Squadra B " + QString::number(puntiSquadraB));
         }
     }
+    else if (state.hand > 1)
+    {
+        int indiceVincitore = -1;
+        int maxPunti = -1;
+        int conteggioMassimi = 0;
+        for (int i = 0; i < 4; ++i)
+        {
+            if (state.seats[i].puntiPartita > maxPunti)
+            {
+                maxPunti = state.seats[i].puntiPartita;
+                indiceVincitore = i;
+                conteggioMassimi = 1;
+            }
+            else if (state.seats[i].puntiPartita == maxPunti)
+            {
+                conteggioMassimi++;
+            }
+        }
+        if (conteggioMassimi == 1)
+        {
+            ++config.players[indiceVincitore].partiteVinte;
+            QString vincitore = config.players[indiceVincitore].name;
+
+            QString colore = (indiceVincitore % 2 == 0) ? colBlu : colArancio;
+
+            QString winnerText = QString("<font size=18>Vince</font> <font color='%1' size=20>%2 !</font>")
+                                     .arg(colore)
+                                     .arg(vincitore);
+
+            updateOverlay(winnerText, "Fine Partita", true);
+            // fine gioco individuale - ritorno alla schermata di partenza e trasmetti i nuovi dati giocatori
+            statoAttualeBottone = FaseBottone::RitornoHomeScreen;
+            emit gameFinished(config.players); // Passi i profili aggiornati alla HomeScreen
+        }
+        else
+        {
+            ++state.hand;
+            state.phase = MatchPhase::Playing;
+
+            // Connect the button's clicked signal to your continueGame function
+            updateOverlay(" PAREGGIO : CONTINUA IL GIOCO", "CONTINUA", true);
+            statoAttualeBottone = FaseBottone::FaseFineTurno;
+        }
+    }
+    else
+    {
+        ++state.hand;
+        state.phase = MatchPhase::Playing;
+
+        // Connect the button's clicked signal to your continueGame function
+        updateOverlay(" CONTINUA IL GIOCO", "CONTINUA", true);
+        statoAttualeBottone = FaseBottone::FaseFineTurno;
+    }
 }
 
 void Cirulla::continueGame()
 {
-    // HERE I DECIDE IF SOMEONE HAS WON
-
     state.dealerIndex = (state.dealerIndex + 1) % 4;
 
     selectedHandCardIndex = -1;
@@ -2139,7 +2229,7 @@ void Cirulla::applyBuonaDaTre(int playerIndex)
 
 void Cirulla::aggiornaStats(int playerIndex)
 {
-    mazzoTextArr[playerIndex]->setText(config.playerNames[playerIndex] +
+    mazzoTextArr[playerIndex]->setText(config.players[playerIndex].name +
                                        "\nPrese: " + QString::number(state.seats[playerIndex].prese.size()) +
                                        "\nScope: " + QString::number(state.seats[playerIndex].totaleScope));
 }

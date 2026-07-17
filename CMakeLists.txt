@@ -13,7 +13,18 @@ add_executable(cirulla
     cirulla.h
     cirulla.ui
     resources.qrc
+    GameTypes.h
+    homeScreen.h
+    )
+
+target_link_libraries(cirulla PRIVATE
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Widgets
 )
+
+
+
 
 # Forza la directory di base per le risorse a essere la cartella del progetto
 set(CMAKE_AUTORCC_SEARCH_PATHS "${CMAKE_CURRENT_SOURCE_DIR}")
