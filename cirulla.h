@@ -145,7 +145,7 @@ private:
     // *******TEST SWITCH********
 
     bool isTestMode = false;
-    bool botGame = true;
+    bool botGame = false;
     int waitTime = botGame == true ? 0 : 1000;
 
     GamePhase currentGamePhase;
@@ -160,7 +160,9 @@ private:
     Carta generaCarta(int i);
 
     void setupGame(const QVector<ProfileData> &players);
+    QVector<ProfileData> getPlayers(QString p);
     void initialDeal();
+    ;
     void executeDeal();
     void dealNextRound();
     void showTable();

@@ -1,3 +1,6 @@
+#ifndef GAMETYPES_H
+#define GAMETYPES_H
+
 #include <QtCore/QString>
 #include <QVector>
 #include <vector>
@@ -147,3 +150,5 @@ struct GameState
     QVector<PlayerState> seats;
     int hand = 0;
 };
+
+#endif

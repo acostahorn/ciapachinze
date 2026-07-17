@@ -15,6 +15,9 @@ add_executable(cirulla
     resources.qrc
     GameTypes.h
     homeScreen.h
+    homeScreen.cpp
+    CharacterManager.h
+    CharacterManager.cpp
     )
 
 target_link_libraries(cirulla PRIVATE

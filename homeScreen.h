@@ -4,24 +4,26 @@
 #include <QWidget>
 #include <QVBoxLayout>
 #include <QPushButton>
+#include <QLineEdit>
+#include <QLabel>
+#include "GameTypes.h"
 
 class HomeScreen : public QWidget
 {
     Q_OBJECT
 public:
-    explicit HomeScreen(QWidget *parent = nullptr) : QWidget(parent)
-    {
+    explicit HomeScreen(QWidget *parent = nullptr);
 
-        QVBoxLayout *layout = new QVBoxLayout(this);
-        QPushButton *btnStart = new QPushButton("Inizia Partita", this);
-        layout->addWidget(btnStart);
-
-        // Connessione di prova per testare il cambio schermata
-        connect(btnStart, &QPushButton::clicked, this, &HomeScreen::startRequested);
-    }
+    QString getPlayerName() const;
 
 signals:
-    void startRequested();
+    void startRequested(QString nomeGiocatoreUmano);
+
+private:
+    QLineEdit *nameEdit;
+    QPushButton *btnStart;
+
+    void handleStartGame();
 };
 
 #endif // HOMESCREEN_H

@@ -1,5 +1,6 @@
 #include "cirulla.h"
 #include "homeScreen.h"
+#include "CharacterManager.h"
 #include <QGridLayout>
 #include <QVBoxLayout>
 #include <QFont>
@@ -470,37 +471,20 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
     updateOverlay("", "", false);
     connect(button, &QPushButton::clicked, this, &Cirulla::onGlobalOverlayClicked);
 
-    connect(homeScreen, &HomeScreen::startRequested, this, [this]()
+    connect(homeScreen, &HomeScreen::startRequested, this, [this](QString p)
             {
                 stackedWidget->setCurrentIndex(1);
                 updateOverlay("CIRULLA", "Inizia il Gioco", true);
                 statoAttualeBottone = FaseBottone::FaseAvvio; 
-                    ProfileData baciccia = {
-        name : "Baciccia",
-        avatarPath : "avatars/Baciccia.png",
-        isHuman : false
-    };
-    ProfileData ugo = {
-        name : "Ugo",
-        avatarPath : "avatars/Ugo.png",
-        isHuman : false
-    };
-    ProfileData alberto = {
-        name : "Alberto",
-        avatarPath : "avatars/Alberto.png",
-        isHuman : true
-    };
-    ProfileData mussadiferro = {
-        name : "Mussadiferro",
-        avatarPath : "avatars/Mussadiferro.png",
-        isHuman : false
-    };
-    QVector<ProfileData> players = {baciccia, ugo, alberto, mussadiferro};
-                this->setupGame(players); });
+                this->setupGame(getPlayers(p)); });
 }
 
 void Cirulla::mainScreen()
 {
+    for (int i = 0; i < state.seats.size(); ++i)
+    {
+        CharacterManager::updatePlayerStats(config.players[i]);
+    }
     updateOverlay("", "", false);
     stackedWidget->setCurrentIndex(0);
 }
@@ -519,6 +503,11 @@ void Cirulla::startGame()
 
     statoAttualeBottone = FaseBottone::FaseSmazzata;
     updateOverlay(QString("%1 è il nuovo Mazziere!").arg(dealerName), "Inizia la smazzata", true);
+}
+
+QVector<ProfileData> Cirulla::getPlayers(QString p)
+{
+    return CharacterManager::getPlayers(p);
 }
 
 void Cirulla::executeDeal()
@@ -561,8 +550,6 @@ void Cirulla::executeDeal()
     showTable();
     dealersChance();
     processTurn();
-
-    // updateOverlay("", "", false);
 }
 
 void Cirulla::setupGame(const QVector<ProfileData> &players)
@@ -571,27 +558,6 @@ void Cirulla::setupGame(const QVector<ProfileData> &players)
     statoAttualeBottone = FaseBottone::FaseAvvio;
 
     state.seats.clear();
-
-    // ProfileData baciccia = {
-    //     name : "Baciccia",
-    //     avatarPath : "avatars/Baciccia.png",
-    //     isHuman : false
-    // };
-    // ProfileData ugo = {
-    //     name : "Ugo",
-    //     avatarPath : "avatars/Ugo.png",
-    //     isHuman : false
-    // };
-    // ProfileData alberto = {
-    //     name : "Alberto",
-    //     avatarPath : "avatars/Alberto.png",
-    //     isHuman : true
-    // };
-    // ProfileData mussadiferro = {
-    //     name : "Mussadiferro",
-    //     avatarPath : "avatars/Mussadiferro.png",
-    //     isHuman : false
-    // };
 
     state.phase = MatchPhase::Playing;
     config.mode = GameMode::Offline;
