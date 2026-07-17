@@ -13,6 +13,9 @@
 #include <QStackedWidget>
 #include <QPushButton>
 #include "GameTypes.h"
+#include "homeScreen.h"
+
+class HomeScreen;
 
 class Cirulla : public QWidget
 {
@@ -35,6 +38,7 @@ private:
 
     // Layouts
 
+    HomeScreen *homeScreen;
     QStackedWidget *stackedWidget;
     QWidget *gameArea;
     QWidget *scoreArea;
@@ -155,7 +159,7 @@ private:
 
     Carta generaCarta(int i);
 
-    void setupGame();
+    void setupGame(const QVector<ProfileData> &players);
     void initialDeal();
     void executeDeal();
     void dealNextRound();

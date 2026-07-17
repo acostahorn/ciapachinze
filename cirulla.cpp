@@ -1,4 +1,5 @@
 #include "cirulla.h"
+#include "homeScreen.h"
 #include <QGridLayout>
 #include <QVBoxLayout>
 #include <QFont>
@@ -29,7 +30,6 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
     this->setFixedSize(1400, 1000);
     stackedWidget = new QStackedWidget(this);
 
-    // Nel costruttore della tua classe principale
     this->setObjectName("MainWindow"); // Importante per referenziarlo
 
     this->setStyleSheet(
@@ -59,6 +59,11 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
         "   color: #ffffff; "
         "   font-weight: bold; "
         "}");
+
+    // riferimento a homeScreen
+
+    homeScreen = new HomeScreen(this);
+    stackedWidget->addWidget(homeScreen);
 
     // playerstyle
     QString playerStyle =
@@ -462,14 +467,42 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
 
     // 7. Initialization
 
+    updateOverlay("", "", false);
     connect(button, &QPushButton::clicked, this, &Cirulla::onGlobalOverlayClicked);
-    statoAttualeBottone = FaseBottone::FaseAvvio;
 
-    setupGame();
+    connect(homeScreen, &HomeScreen::startRequested, this, [this]()
+            {
+                stackedWidget->setCurrentIndex(1);
+                updateOverlay("CIRULLA", "Inizia il Gioco", true);
+                statoAttualeBottone = FaseBottone::FaseAvvio; 
+                    ProfileData baciccia = {
+        name : "Baciccia",
+        avatarPath : "avatars/Baciccia.png",
+        isHuman : false
+    };
+    ProfileData ugo = {
+        name : "Ugo",
+        avatarPath : "avatars/Ugo.png",
+        isHuman : false
+    };
+    ProfileData alberto = {
+        name : "Alberto",
+        avatarPath : "avatars/Alberto.png",
+        isHuman : true
+    };
+    ProfileData mussadiferro = {
+        name : "Mussadiferro",
+        avatarPath : "avatars/Mussadiferro.png",
+        isHuman : false
+    };
+    QVector<ProfileData> players = {baciccia, ugo, alberto, mussadiferro};
+                this->setupGame(players); });
 }
 
 void Cirulla::mainScreen()
 {
+    updateOverlay("", "", false);
+    stackedWidget->setCurrentIndex(0);
 }
 
 void Cirulla::startGame()
@@ -499,8 +532,6 @@ void Cirulla::executeDeal()
         }
     }
 
-    if (currentGamePhase != STATE_READY_TO_START)
-        return;
     button->setEnabled(false);
 
     if (isTestMode)
@@ -534,33 +565,38 @@ void Cirulla::executeDeal()
     // updateOverlay("", "", false);
 }
 
-void Cirulla::setupGame()
+void Cirulla::setupGame(const QVector<ProfileData> &players)
 {
-    ProfileData baciccia = {
-        name : "Baciccia",
-        avatarPath : "avatars/Baciccia.png",
-        isHuman : false
-    };
-    ProfileData ugo = {
-        name : "Ugo",
-        avatarPath : "avatars/Ugo.png",
-        isHuman : false
-    };
-    ProfileData alberto = {
-        name : "Alberto",
-        avatarPath : "avatars/Alberto.png",
-        isHuman : true
-    };
-    ProfileData mussadiferro = {
-        name : "Mussadiferro",
-        avatarPath : "avatars/Mussadiferro.png",
-        isHuman : false
-    };
+    updateOverlay("CIRULLA", "Inizia il Gioco", true);
+    statoAttualeBottone = FaseBottone::FaseAvvio;
+
+    state.seats.clear();
+
+    // ProfileData baciccia = {
+    //     name : "Baciccia",
+    //     avatarPath : "avatars/Baciccia.png",
+    //     isHuman : false
+    // };
+    // ProfileData ugo = {
+    //     name : "Ugo",
+    //     avatarPath : "avatars/Ugo.png",
+    //     isHuman : false
+    // };
+    // ProfileData alberto = {
+    //     name : "Alberto",
+    //     avatarPath : "avatars/Alberto.png",
+    //     isHuman : true
+    // };
+    // ProfileData mussadiferro = {
+    //     name : "Mussadiferro",
+    //     avatarPath : "avatars/Mussadiferro.png",
+    //     isHuman : false
+    // };
 
     state.phase = MatchPhase::Playing;
     config.mode = GameMode::Offline;
     config.humanSeatIndex = 2;
-    config.players = {baciccia, ugo, alberto, mussadiferro};
+    config.players = players;
 
     for (int i = 0; i < 4; ++i)
     {
@@ -1046,7 +1082,7 @@ void Cirulla::processTurn()
     }
 
     // 2. Se è il giocatore umano (supponiamo sia sempre al seat 2)
-    if (currentPlayerIndex == config.humanSeatIndex)
+    if (currentPlayerIndex == config.humanSeatIndex && botGame == false)
     {
         // Abilitiamo il clic sulle carte nella mano del giocatore
         enableHandInteraction(true);
@@ -1167,6 +1203,8 @@ void Cirulla::playCard(int handIndex, QList<int> &tableIndices)
     // 2. Gestione fine mano
     if (tuttiHannoFinito)
     {
+        fprintf(stderr, "Tutti hanno finito!\n");
+        fflush(stderr);
         if (state.deckIndex < state.deck.size())
         {
             for (auto &player : state.seats)
@@ -1689,6 +1727,8 @@ void Cirulla::updatePlayerUI(int playerIndex)
 
 void Cirulla::dealNextRound()
 {
+    fprintf(stderr, "Diamo le carte!\n");
+    fflush(stderr);
     outputArea->append(QString("indice delle carte: %1").arg(state.deckIndex));
     // Distribuisci 3 carte a ciascuno
 
@@ -1726,7 +1766,7 @@ void Cirulla::handleEndOfGame()
 
     // visualizza schermo punteggi
 
-    stackedWidget->setCurrentIndex(1);
+    stackedWidget->setCurrentIndex(2);
     outputArea->clear();
 
     QString manoText = QString("MANO N. %1").arg(state.hand + 1);
@@ -2067,7 +2107,7 @@ void Cirulla::continueGame()
         state.seats[i].carteScoperte = false;
     }
 
-    stackedWidget->setCurrentIndex(0);
+    stackedWidget->setCurrentIndex(1);
     showTable();
     showHands();
     statoAttualeBottone = FaseSmazzata;
@@ -2229,6 +2269,10 @@ void Cirulla::applyBuonaDaTre(int playerIndex)
 
 void Cirulla::aggiornaStats(int playerIndex)
 {
+    fprintf(stderr, "DEBUG: playerIndex: %d\n", playerIndex);
+    fprintf(stderr, "Size config.players: %zu\n", (size_t)config.players.size());
+    fprintf(stderr, "Size state.seats: %zu\n", (size_t)state.seats.size());
+    fflush(stderr);
     mazzoTextArr[playerIndex]->setText(config.players[playerIndex].name +
                                        "\nPrese: " + QString::number(state.seats[playerIndex].prese.size()) +
                                        "\nScope: " + QString::number(state.seats[playerIndex].totaleScope));
