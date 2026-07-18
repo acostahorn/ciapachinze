@@ -18,6 +18,8 @@ add_executable(cirulla
     homeScreen.cpp
     CharacterManager.h
     CharacterManager.cpp
+    hallOfFameDialog.h
+    hallOfFameDialog.cpp
     )
 
 target_link_libraries(cirulla PRIVATE

@@ -1,6 +1,10 @@
 #include "CharacterManager.h"
 #include "GameTypes.h"
 #include <QString>
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonArray>
+#include <QJsonObject>
 
 // --- QUESTA RIGA DEVE ESSERE QUI (fuori dalle funzioni) ---
 QVector<ProfileData> CharacterManager::m_registeredPlayers = {
@@ -10,7 +14,9 @@ QVector<ProfileData> CharacterManager::m_registeredPlayers = {
     {"Alberto", "avatars/Alberto.png", true}};
 // ---------------------------------------------------------
 
-CharacterManager::CharacterManager() {}
+CharacterManager::CharacterManager()
+{
+}
 
 QVector<ProfileData> CharacterManager::getPlayers(const QString humanPlayerName)
 {
@@ -65,7 +71,6 @@ void CharacterManager::createNewPlayer(const QString &name, const QString &avata
     newPlayer.avatarPath = avatarPath;
     newPlayer.isHuman = true;
 
-    // Lo aggiungiamo alla lista in memoria
     m_registeredPlayers.append(newPlayer);
 
     saveToDisk();
@@ -73,4 +78,50 @@ void CharacterManager::createNewPlayer(const QString &name, const QString &avata
 
 void CharacterManager::saveToDisk()
 {
+    QJsonArray playersArray;
+
+    for (const auto &p : m_registeredPlayers)
+    {
+        QJsonObject playerObj;
+        playerObj["name"] = p.name;
+        playerObj["avatar"] = p.avatarPath;
+        playerObj["isHuman"] = p.isHuman;
+        playerObj["playedMatches"] = p.playedMatches;
+        playerObj["wonMatches"] = p.wonMatches;
+        playersArray.append(playerObj);
+    }
+    QJsonDocument doc(playersArray);
+    QFile file("players.json");
+    if (file.open(QIODevice::WriteOnly))
+    {
+        file.write(doc.toJson());
+        file.close();
+    }
+}
+
+void CharacterManager::loadFromDisk()
+{
+    QFile file("players.json");
+    if (!file.open(QIODevice::ReadOnly))
+        return;
+
+    QByteArray data = file.readAll();
+    QJsonDocument doc = QJsonDocument::fromJson(data);
+    QJsonArray array = doc.array();
+
+    m_registeredPlayers.clear();
+
+    for (const auto &val : array)
+    {
+        QJsonObject obj = val.toObject();
+        ProfileData p;
+        p.name = obj["name"].toString();
+        p.avatarPath = obj["avatar"].toString();
+        p.isHuman = obj["isHuman"].toBool();
+        p.playedMatches = obj["playedMatches"].toInt();
+        p.wonMatches = obj["wonMatches"].toInt();
+
+        m_registeredPlayers.append(p);
+    }
+    file.close();
 }

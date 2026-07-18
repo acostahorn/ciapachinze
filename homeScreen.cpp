@@ -1,5 +1,6 @@
 #include "homeScreen.h"
 #include "CharacterManager.h"
+#include "hallOfFameDialog.h"
 #include <QLabel>
 #include <QFont>
 #include <QFile>
@@ -48,17 +49,23 @@ HomeScreen::HomeScreen(QWidget *parent) : QWidget(parent)
     // --- Bottone ---
     btnStart = new QPushButton("Inizia Partita", this);
     btnStart->setFixedWidth(200);
+    QPushButton *btnHallOfFame = new QPushButton("Classifica", this);
 
     mainLayout->addStretch();
     mainLayout->addLayout(inputLayout);
     mainLayout->addWidget(btnStart, 0, Qt::AlignCenter);
     mainLayout->addStretch();
+    mainLayout->addWidget(btnHallOfFame, 0, Qt::AlignCenter);
 
     connect(btnStart, &QPushButton::clicked, this, [this]()
             {
 
     QString nome = nameEdit->text().trimmed();
     handleStartGame(); });
+    connect(btnHallOfFame, &QPushButton::clicked, this, [this]()
+            {
+                ::HallOfFameDialog dlg(this);
+                dlg.exec(); });
 }
 
 void HomeScreen::handleStartGame()

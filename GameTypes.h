@@ -62,15 +62,15 @@ struct ProfileData
     bool isHuman = false;
 
     // Statistiche persistenti
-    int partiteGiocate = 0;
-    int partiteVinte = 0;
+    int playedMatches = 0;
+    int wonMatches = 0;
 
     // Helper per il calcolo percentuale
     double getWinRate() const
     {
-        if (partiteGiocate == 0)
+        if (playedMatches == 0)
             return 0.0;
-        return (static_cast<double>(partiteVinte) / partiteGiocate) * 100.0;
+        return (static_cast<double>(wonMatches) / playedMatches) * 100.0;
     }
 };
 

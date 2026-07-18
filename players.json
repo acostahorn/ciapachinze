@@ -1,0 +1,37 @@
+[
+    {
+        "avatar": "avatars/Baciccia.png",
+        "isHuman": false,
+        "name": "Baciccia",
+        "playedMatches": 3,
+        "wonMatches": 0
+    },
+    {
+        "avatar": "avatars/Ugo.png",
+        "isHuman": false,
+        "name": "Ugo",
+        "playedMatches": 3,
+        "wonMatches": 1
+    },
+    {
+        "avatar": "avatars/Mussadiferro.png",
+        "isHuman": false,
+        "name": "Mussadiferro",
+        "playedMatches": 3,
+        "wonMatches": 0
+    },
+    {
+        "avatar": "avatars/Alberto.png",
+        "isHuman": true,
+        "name": "Alberto",
+        "playedMatches": 0,
+        "wonMatches": 0
+    },
+    {
+        "avatar": "/home/alberto/Pictures/Pippo.png",
+        "isHuman": true,
+        "name": "Pippo",
+        "playedMatches": 3,
+        "wonMatches": 0
+    }
+]

@@ -14,14 +14,14 @@ class HomeScreen : public QWidget
 public:
     explicit HomeScreen(QWidget *parent = nullptr);
 
-    QString getPlayerName() const;
-
 signals:
     void startRequested(QString nomeGiocatoreUmano);
 
 private:
     QLineEdit *nameEdit;
     QPushButton *btnStart;
+    QPushButton *btnHallOfFame;
+    QDialog *HallOfFameDialog;
 
     void handleStartGame();
 };

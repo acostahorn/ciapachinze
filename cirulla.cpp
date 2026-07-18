@@ -481,8 +481,10 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
 
 void Cirulla::mainScreen()
 {
+
     for (int i = 0; i < state.seats.size(); ++i)
     {
+        ++config.players[i].playedMatches;
         CharacterManager::updatePlayerStats(config.players[i]);
     }
     updateOverlay("", "", false);
@@ -1721,7 +1723,7 @@ void Cirulla::handleEndOfGame()
     for (int i = 0; i < 4; i++)
     {
         nameLabel[i]->setText(config.players[i].name);
-        QString avatarPath = "avatars/" + config.players[i].name + ".png";
+        QString avatarPath = config.players[i].avatarPath;
         QPixmap cardImage(avatarPath);
 
         scoreAvatar[i]->setPixmap(cardImage.scaled(120, 140, Qt::KeepAspectRatio, Qt::SmoothTransformation));
@@ -1947,11 +1949,6 @@ void Cirulla::handleEndOfGame()
                                    .arg(state.seats[i].puntiPartita));
     }
 
-    for (int i = 0; i < 4; i++)
-    {
-        ++config.players[i].partiteGiocate;
-    }
-
     if (config.giocoACoppie)
     {
         // Recupera i totali attuali (che sappiamo essere aggiornati correttamente)
@@ -1963,13 +1960,13 @@ void Cirulla::handleEndOfGame()
         {
             if (puntiSquadraA >= 2)
             {
-                ++config.players[0].partiteVinte;
-                ++config.players[2].partiteVinte;
+                ++config.players[0].wonMatches;
+                ++config.players[2].wonMatches;
             }
             else
             {
-                ++config.players[1].partiteVinte;
-                ++config.players[3].partiteVinte;
+                ++config.players[1].wonMatches;
+                ++config.players[3].wonMatches;
             }
             QString vincitore = (puntiSquadraA >= 2) ? config.players[0].name + " e " + config.players[2].name
                                                      : config.players[1].name + " e " + config.players[3].name;
@@ -2018,7 +2015,7 @@ void Cirulla::handleEndOfGame()
         }
         if (conteggioMassimi == 1)
         {
-            ++config.players[indiceVincitore].partiteVinte;
+            ++config.players[indiceVincitore].wonMatches;
             QString vincitore = config.players[indiceVincitore].name;
 
             QString colore = (indiceVincitore % 2 == 0) ? colBlu : colArancio;
