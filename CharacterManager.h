@@ -27,6 +27,8 @@ public:
 
     static QString getSaveFilePath();
 
+    static void ensureBotsExist();
+
     // Nel CharacterManager.h
     static QVector<ProfileData> getAllPlayers()
     {

@@ -19,27 +19,45 @@ QVector<ProfileData> CharacterManager::m_registeredPlayers = {
 
 CharacterManager::CharacterManager()
 {
+    loadFromDisk();
+    ensureBotsExist();
 }
 
 QVector<ProfileData> CharacterManager::getPlayers(const QString humanPlayerName)
 {
-    QString humanPlayerTrimmed = humanPlayerName.trimmed();
+    QVector<ProfileData> botPlayers;
+    ProfileData humanPlayer;
+    bool humanFound = false;
 
-    // Cerca il giocatore
-    auto it = std::find_if(m_registeredPlayers.begin(), m_registeredPlayers.end(),
-                           [&](const ProfileData &p)
-                           { return p.name == humanPlayerTrimmed; });
+    for (const auto &p : m_registeredPlayers)
+    {
+        if (p.name == humanPlayerName.trimmed())
+        {
+            humanPlayer = p;
+            humanFound = true;
+        }
+        else if (!p.isHuman)
+        {
+            botPlayers.append(p);
+        }
+    }
 
-    // Se non trovato, usa il default
-    ProfileData profile = (it != m_registeredPlayers.end()) ? *it : ProfileData{"Alberto", "avatars/Alberto.png", true};
+    // Se l'umano non esiste nel database, crealo al volo
+    if (!humanFound)
+    {
+        humanPlayer = {humanPlayerName.trimmed(), "avatars/default.png", true};
+    }
 
-    return {
-        {"Baciccia", "avatars/Baciccia.png", false},
-        {"Ugo", "avatars/Ugo.png", false},
-        profile,
-        {"Mussadiferro", "avatars/Mussadiferro.png", false}};
+    // 2. Costruiamo il tavolo
+    QVector<ProfileData> table;
+
+    table.append(botPlayers.value(0, {"Baciccia", "avatars/Baciccia.png", false}));
+    table.append(botPlayers.value(1, {"Ugo", "avatars/Ugo.png", false}));
+    table.append(humanPlayer);
+    table.append(botPlayers.value(2, {"Mussadiferro", "avatars/Mussadiferro.png", false}));
+
+    return table;
 }
-
 void CharacterManager::updatePlayerStats(const ProfileData &updatedProfile)
 {
     bool found = false;
@@ -154,16 +172,35 @@ void CharacterManager::loadFromDisk()
 
 QString CharacterManager::getSaveFilePath()
 {
-    // 1. Ottieni il percorso della cartella dati dell'utente (es. ~/.local/share/Cirulla su Linux)
     QString dataLocation = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
 
-    // 2. Assicurati che la cartella esista
     QDir dir(dataLocation);
     if (!dir.exists())
     {
         dir.mkpath(".");
     }
 
-    // 3. Ritorna il percorso completo al file
     return dataLocation + "/players.json";
+}
+
+void CharacterManager::ensureBotsExist()
+{
+    QStringList botNames = {"Baciccia", "Ugo", "Mussadiferro"};
+
+    for (const QString &name : botNames)
+    {
+        if (!playerExists(name))
+        {
+            ProfileData bot;
+            bot.name = name;
+            bot.avatarPath = "avatars/" + name + ".png";
+            bot.isHuman = false;
+            bot.playedMatches = 0;
+            bot.wonMatches = 0;
+
+            m_registeredPlayers.append(bot);
+        }
+    }
+    // Una volta aggiunti, salviamo lo stato iniziale su disco
+    saveToDisk();
 }
