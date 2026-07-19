@@ -488,6 +488,7 @@ void Cirulla::mainScreen()
         CharacterManager::updatePlayerStats(config.players[i]);
     }
     updateOverlay("", "", false);
+    clearScopeAndPreseLabels();
     stackedWidget->setCurrentIndex(0);
 }
 
@@ -545,7 +546,7 @@ void Cirulla::executeDeal()
         QString mano;
         for (auto &c : state.seats[i].hand)
             mano += QString::number(c.faceValue) + " ";
-        outputArea->append("DEBUG: Mano Giocatore " + QString::number(i) + ": " + mano);
+        // outputArea->append("DEBUG: Mano Giocatore " + QString::number(i) + ": " + mano);
     }
 
     showHands();
@@ -556,10 +557,13 @@ void Cirulla::executeDeal()
 
 void Cirulla::setupGame(const QVector<ProfileData> &players)
 {
+    hardReset();
+
     updateOverlay("CIRULLA", "Inizia il Gioco", true);
     statoAttualeBottone = FaseBottone::FaseAvvio;
 
     state.seats.clear();
+    config.players.clear();
 
     state.phase = MatchPhase::Playing;
     config.mode = GameMode::Offline;
@@ -583,7 +587,7 @@ void Cirulla::setupGame(const QVector<ProfileData> &players)
 
         if (i == config.humanSeatIndex && botGame == false)
         {
-            p.name = config.players[i].name + "(tu)";
+            p.name = config.players[i].name;
             p.type = SeatType::Human;
             p.carteScoperte = false;
         }
@@ -1171,8 +1175,8 @@ void Cirulla::playCard(int handIndex, QList<int> &tableIndices)
     // 2. Gestione fine mano
     if (tuttiHannoFinito)
     {
-        fprintf(stderr, "Tutti hanno finito!\n");
-        fflush(stderr);
+        // fprintf(stderr, "Tutti hanno finito!\n");
+        // fflush(stderr);
         if (state.deckIndex < state.deck.size())
         {
             for (auto &player : state.seats)
@@ -1208,17 +1212,18 @@ void Cirulla::playCard(int handIndex, QList<int> &tableIndices)
                 ultimoAPrendere.prese.append(card);
             }
 
-            QTimer::singleShot(2000, this, [=]()
+            QTimer::singleShot(2000, this, [this, lastOneId]()
                                {
-    PlayerState &player = state.seats[lastOneId];
-    aggiornaMazzoPrese(player);
+                
+                if (this->state.phase != MatchPhase::Playing) return;
 
-    state.tableCards.clear();
-    showTable(); });
-
-            QTimer::singleShot(2000, this, [=]()
-                               { handleEndOfGame(); });
-
+                PlayerState &player = this->state.seats[lastOneId];
+                this->aggiornaMazzoPrese(player);
+                this->state.tableCards.clear();
+                this->showTable();
+                
+                // Ora chiamiamo la fine gioco in sequenza sicura
+                this->handleEndOfGame(); });
             return; // Partita finita, non chiamare processTurn
         }
     }
@@ -1228,7 +1233,7 @@ void Cirulla::playCard(int handIndex, QList<int> &tableIndices)
         selectedHandCardIndex = -1;
         selectedTableIndices.clear();
         state.currentTurnIndex = (state.currentTurnIndex + 1) % state.seats.size();
-        outputArea->append("DEBUG: Turno passato a " + state.seats[state.currentTurnIndex].name);
+        // outputArea->append("DEBUG: Turno passato a " + state.seats[state.currentTurnIndex].name);
     }
 
     // 4. L'UNICA COSA DA FARE: chiamare il regista
@@ -1638,11 +1643,18 @@ void Cirulla::executeBotMove(const Mossa &m)
     revealedCardIndex = m.handIndex;
     showHands();
 
-    QTimer::singleShot(waitTime, this, [=]()
+    int handIdx = m.handIndex;
+    QList<int> tableIndices = m.tableIndices;
+
+    QTimer::singleShot(waitTime, this, [this, handIdx, tableIndices]()
+
                        {
-        // Ora esegui la mossa vera e propria
-        this->playCard(m.handIndex, const_cast<QList<int>&>(m.tableIndices)); 
-    revealedCardIndex = -1; });
+                        if (this->state.phase != MatchPhase::Playing) return;
+                        QList<int> listaLocale = tableIndices;
+        // Ora tableIndices è una copia locale, nessuno può toccarla
+        // E non serve più il const_cast perché tableIndices è locale e non const
+        this->playCard(handIdx, listaLocale); 
+        revealedCardIndex = -1; });
 }
 
 void Cirulla::updatePlayerUI(int playerIndex)
@@ -1695,8 +1707,8 @@ void Cirulla::updatePlayerUI(int playerIndex)
 
 void Cirulla::dealNextRound()
 {
-    fprintf(stderr, "Diamo le carte!\n");
-    fflush(stderr);
+    // fprintf(stderr, "Diamo le carte!\n");
+    // fflush(stderr);
     outputArea->append(QString("indice delle carte: %1").arg(state.deckIndex));
     // Distribuisci 3 carte a ciascuno
 
@@ -2108,11 +2120,11 @@ bool Cirulla::checkBuonaDaDieci(int playerIndex)
 {
     QVector<Carta> &mano = state.seats[playerIndex].hand; // Usa riferimento per modificare
 
-    outputArea->append(QString("DEBUG: Confronto mano %1 | Valori: %2, %3, %4")
-                           .arg(state.seats[playerIndex].name)
-                           .arg(mano[0].faceValue)
-                           .arg(mano[1].faceValue)
-                           .arg(mano[2].faceValue));
+    // outputArea->append(QString("DEBUG: Confronto mano %1 | Valori: %2, %3, %4")
+    //                        .arg(state.seats[playerIndex].name)
+    //                        .arg(mano[0].faceValue)
+    //                        .arg(mano[1].faceValue)
+    //                        .arg(mano[2].faceValue));
 
     if (state.seats[playerIndex].carteScoperte || mano.size() != 3)
         return false;
@@ -2232,10 +2244,10 @@ void Cirulla::applyBuonaDaTre(int playerIndex)
 
 void Cirulla::aggiornaStats(int playerIndex)
 {
-    fprintf(stderr, "DEBUG: playerIndex: %d\n", playerIndex);
-    fprintf(stderr, "Size config.players: %zu\n", (size_t)config.players.size());
-    fprintf(stderr, "Size state.seats: %zu\n", (size_t)state.seats.size());
-    fflush(stderr);
+    // fprintf(stderr, "DEBUG: playerIndex: %d\n", playerIndex);
+    // fprintf(stderr, "Size config.players: %zu\n", (size_t)config.players.size());
+    // fprintf(stderr, "Size state.seats: %zu\n", (size_t)state.seats.size());
+    // fflush(stderr);
     mazzoTextArr[playerIndex]->setText(config.players[playerIndex].name +
                                        "\nPrese: " + QString::number(state.seats[playerIndex].prese.size()) +
                                        "\nScope: " + QString::number(state.seats[playerIndex].totaleScope));
@@ -2551,7 +2563,7 @@ void Cirulla::onGlobalOverlayClicked()
         break;
 
     case FaseDopoBuona:
-        outputArea->append("DEBUG: Buona confermata, riprendiamo il turno.");
+        // outputArea->append("DEBUG: Buona confermata, riprendiamo il turno.");
         isWaitingForBuona = false;
 
         // 1. Aggiorna il turno
@@ -2563,10 +2575,14 @@ void Cirulla::onGlobalOverlayClicked()
         // Lascia che sia il giocatore (o il timer del bot) a innescare la mossa
         // tramite un click o la pressione di un tasto.
         // Se è il turno del bot, usa un timer per farlo giocare tra un secondo.
+        // Sostituisci la vecchia chiamata al timer del bot con questa:
         if (state.seats[state.currentTurnIndex].type == SeatType::Bot)
-            ;
         {
-            QTimer::singleShot(1000, this, &Cirulla::processTurn);
+            QTimer::singleShot(1000, this, [this]()
+                               {
+        if (state.phase == MatchPhase::Playing) {
+            this->processTurn();
+        } });
         }
         break;
 
@@ -2610,6 +2626,21 @@ void Cirulla::resetValoreMatta()
             if (carta.id == 16)
                 carta.faceValue = 7;
     }
+}
+
+void Cirulla::clearScopeAndPreseLabels()
+{
+    for (int i = 0; i < 4; i++)
+    {
+        mazzoPreseIconArr[i]->clear();
+        mazzoScopeIconArr[i]->clear();
+    }
+}
+
+void Cirulla::hardReset()
+{
+    state = GameState();
+    config = GameConfig();
 }
 
 Cirulla::~Cirulla()

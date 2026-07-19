@@ -25,8 +25,15 @@ public:
     static void saveToDisk();
     static void loadFromDisk();
 
+    static QString getSaveFilePath();
+
     // Nel CharacterManager.h
-    static QVector<ProfileData> getAllPlayers() { return m_registeredPlayers; }
+    static QVector<ProfileData> getAllPlayers()
+    {
+        CharacterManager manager; // Creiamo un'istanza temporanea
+        manager.loadFromDisk();   // Carichiamo i dati dal file
+        return m_registeredPlayers;
+    }
 
 private:
     static QVector<ProfileData> m_registeredPlayers;

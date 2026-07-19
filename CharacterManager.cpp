@@ -5,6 +5,9 @@
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QJsonObject>
+#include <QVector>
+#include <QDir>
+#include <QStandardPaths>
 
 // --- QUESTA RIGA DEVE ESSERE QUI (fuori dalle funzioni) ---
 QVector<ProfileData> CharacterManager::m_registeredPlayers = {
@@ -39,14 +42,30 @@ QVector<ProfileData> CharacterManager::getPlayers(const QString humanPlayerName)
 
 void CharacterManager::updatePlayerStats(const ProfileData &updatedProfile)
 {
+    bool found = false;
+
+    // Debug: cosa stiamo cercando?
+    fprintf(stderr, "DEBUG: Cerco '%s' (isHuman: %d) tra %zu giocatori in memoria.\n",
+            qPrintable(updatedProfile.name), updatedProfile.isHuman, m_registeredPlayers.size());
+
     for (auto &p : m_registeredPlayers)
     {
+        // Debug: vediamo cosa c'è in memoria
+        // fprintf(stderr, "   Confronto con: '%s'\n", qPrintable(p.name));
+
         if (p.name == updatedProfile.name)
         {
+            found = true;
             p = updatedProfile;
             saveToDisk();
-            return; // Usciamo subito appena trovato, non serve continuare
+            fprintf(stderr, "DEBUG: '%s' trovato e aggiornato!\n", qPrintable(updatedProfile.name));
+            return;
         }
+    }
+
+    if (!found)
+    {
+        fprintf(stderr, "ERRORE: Profilo '%s' NON TROVATO!\n", qPrintable(updatedProfile.name));
     }
 }
 
@@ -91,7 +110,7 @@ void CharacterManager::saveToDisk()
         playersArray.append(playerObj);
     }
     QJsonDocument doc(playersArray);
-    QFile file("players.json");
+    QFile file(getSaveFilePath());
     if (file.open(QIODevice::WriteOnly))
     {
         file.write(doc.toJson());
@@ -101,7 +120,14 @@ void CharacterManager::saveToDisk()
 
 void CharacterManager::loadFromDisk()
 {
-    QFile file("players.json");
+    QFile file(getSaveFilePath());
+
+    if (!file.exists())
+    {
+        fprintf(stderr, "Nessun file di salvataggio trovato in: %s. Creo una lista vuota.\n", qPrintable(file.fileName()));
+        return;
+    }
+
     if (!file.open(QIODevice::ReadOnly))
         return;
 
@@ -124,4 +150,20 @@ void CharacterManager::loadFromDisk()
         m_registeredPlayers.append(p);
     }
     file.close();
+}
+
+QString CharacterManager::getSaveFilePath()
+{
+    // 1. Ottieni il percorso della cartella dati dell'utente (es. ~/.local/share/Cirulla su Linux)
+    QString dataLocation = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+
+    // 2. Assicurati che la cartella esista
+    QDir dir(dataLocation);
+    if (!dir.exists())
+    {
+        dir.mkpath(".");
+    }
+
+    // 3. Ritorna il percorso completo al file
+    return dataLocation + "/players.json";
 }

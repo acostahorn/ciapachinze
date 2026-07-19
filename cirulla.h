@@ -197,6 +197,7 @@ private:
 
     int numeroAssiInTavola() const;
     void updatePlayerUI(int playerIndex);
+    void clearScopeAndPreseLabels();
     void aggiornaMazzoPrese(PlayerState &p);
     void aggiornaMazzoScope(PlayerState &p, Carta &c);
     QVector<Mossa> possibiliPrese(int handIndex);
@@ -220,6 +221,8 @@ private:
     void onGlobalOverlayClicked();
 
     void resetValoreMatta();
+
+    void hardReset();
 
 signals:
     void gameFinished(QVector<ProfileData> updatedPlayers);
