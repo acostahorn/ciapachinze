@@ -20,6 +20,8 @@ add_executable(cirulla
     CharacterManager.cpp
     hallOfFameDialog.h
     hallOfFameDialog.cpp
+    RegoleDialog.h
+    RegoleDialog.cpp
     )
 
 target_link_libraries(cirulla PRIVATE

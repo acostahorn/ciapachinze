@@ -1,6 +1,7 @@
 #include "homeScreen.h"
 #include "CharacterManager.h"
 #include "hallOfFameDialog.h"
+#include "RegoleDialog.h"
 #include <QLabel>
 #include <QFont>
 #include <QFile>
@@ -16,6 +17,9 @@ HomeScreen::HomeScreen(QWidget *parent) : QWidget(parent)
                   "  background-position: center; "
                   "  background-repeat: no-repeat; "
                   "  background-color: transparent; " // Forza la trasparenza rispetto al padre
+                  "}"
+                  "QPushButton { "
+                  " font-size: 20px; "
                   "}";
 
     this->setStyleSheet(css);
@@ -46,16 +50,33 @@ HomeScreen::HomeScreen(QWidget *parent) : QWidget(parent)
     inputLayout->addWidget(nameEdit, 0, Qt::AlignCenter);
     inputLayout->setAlignment(Qt::AlignCenter);
 
-    // --- Bottone ---
+    // --- Bottoni ---
     btnStart = new QPushButton("Inizia Partita", this);
     btnStart->setFixedWidth(200);
-    QPushButton *btnHallOfFame = new QPushButton("Classifica", this);
 
-    mainLayout->addStretch();
+    QHBoxLayout *navLayout = new QHBoxLayout();
+    QPushButton *btnHallOfFame = new QPushButton("Classifica", this);
+    QPushButton *btnRules = new QPushButton("Regole", this);
+
+    navLayout->addWidget(btnHallOfFame);
+    navLayout->addWidget(btnRules);
+
+    // --- Configurazione finale del mainLayout ---
+    mainLayout->addStretch(); // Spinge tutto giù
+
     mainLayout->addLayout(inputLayout);
+
+    // Aggiungiamo un piccolo spazio tra input e bottone
+    mainLayout->addSpacing(20);
+
     mainLayout->addWidget(btnStart, 0, Qt::AlignCenter);
-    mainLayout->addStretch();
-    mainLayout->addWidget(btnHallOfFame, 0, Qt::AlignCenter);
+
+    // Aggiungiamo un altro spazio prima della barra di navigazione
+    mainLayout->addSpacing(20);
+
+    mainLayout->addStretch(); // Spinge tutto su (il doppio stretch bilancia lo spazio)
+
+    mainLayout->addLayout(navLayout);
 
     connect(btnStart, &QPushButton::clicked, this, [this]()
             {
@@ -66,31 +87,31 @@ HomeScreen::HomeScreen(QWidget *parent) : QWidget(parent)
             {
                 ::HallOfFameDialog dlg(this);
                 dlg.exec(); });
+    connect(btnRules, &QPushButton::clicked, this, [this]()
+            {
+                ::RegoleDialog dlg(this);
+                dlg.exec(); });
 }
 
 void HomeScreen::handleStartGame()
 {
     QString nome = nameEdit->text().trimmed();
     if (nome.isEmpty())
-        return; // Non fare nulla se il nome è vuoto
+        return;
 
     // 1. Logica di controllo (chiamando il Manager)
     if (!CharacterManager::playerExists(nome))
     {
 
-        // 2. Logica di UI (apertura dialogo)
         QString avatarPath = QFileDialog::getOpenFileName(this, "Seleziona Avatar");
 
-        // 3. Se l'utente annulla, usciamo dalla funzione e NON emettiamo il segnale
         if (avatarPath.isEmpty())
         {
             return;
         }
 
-        // 4. Se arriviamo qui, l'utente ha scelto: registriamo il nuovo giocatore
         CharacterManager::createNewPlayer(nome, avatarPath);
     }
 
-    // 5. Solo adesso, sicuri che il giocatore esiste, lanciamo il segnale per avviare il gioco
     emit startRequested(nome);
 }
