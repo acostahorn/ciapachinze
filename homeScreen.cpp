@@ -89,7 +89,7 @@ HomeScreen::HomeScreen(QWidget *parent) : QWidget(parent)
                 dlg.exec(); });
     connect(btnRules, &QPushButton::clicked, this, [this]()
             {
-                ::RegoleDialog dlg(this);
+                RegoleDialog dlg(this);
                 dlg.exec(); });
 }
 

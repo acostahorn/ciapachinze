@@ -1,5 +1,5 @@
 #ifndef RULESDIALOG_H
-#define RULSEDIALOG_H
+#define RULESDIALOG_H
 
 #include <QDialog>
 #include <QTextEdit>
