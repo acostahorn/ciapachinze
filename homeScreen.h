@@ -6,6 +6,7 @@
 #include <QPushButton>
 #include <QLineEdit>
 #include <QLabel>
+#include <QComboBox>
 #include "GameTypes.h"
 
 class HomeScreen : public QWidget
@@ -14,6 +15,8 @@ class HomeScreen : public QWidget
 public:
     explicit HomeScreen(QWidget *parent = nullptr);
 
+    bool isCoupleMode() const;
+
 signals:
     void startRequested(QString nomeGiocatoreUmano);
 
@@ -21,6 +24,7 @@ private:
     QLineEdit *nameEdit;
     QPushButton *btnStart;
     QPushButton *btnHallOfFame;
+    QComboBox *gameModeSelector;
     QDialog *HallOfFameDialog;
 
     void handleStartGame();

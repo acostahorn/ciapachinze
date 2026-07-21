@@ -476,7 +476,8 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
                 stackedWidget->setCurrentIndex(1);
                 updateOverlay("CIRULLA", "Inizia il Gioco", true);
                 statoAttualeBottone = FaseBottone::FaseAvvio; 
-                this->setupGame(getPlayers(p)); });
+                bool giocoACoppie = homeScreen->isCoupleMode();
+                this->setupGame(getPlayers(p), giocoACoppie); });
 }
 
 void Cirulla::mainScreen()
@@ -555,7 +556,7 @@ void Cirulla::executeDeal()
     processTurn();
 }
 
-void Cirulla::setupGame(const QVector<ProfileData> &players)
+void Cirulla::setupGame(const QVector<ProfileData> &players, bool giocoACoppie)
 {
     hardReset();
 
@@ -569,6 +570,7 @@ void Cirulla::setupGame(const QVector<ProfileData> &players)
     config.mode = GameMode::Offline;
     config.humanSeatIndex = 2;
     config.players = players;
+    config.giocoACoppie = giocoACoppie;
 
     for (int i = 0; i < 4; ++i)
     {

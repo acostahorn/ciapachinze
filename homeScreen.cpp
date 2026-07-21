@@ -6,6 +6,7 @@
 #include <QFont>
 #include <QFile>
 #include <QFileDialog>
+#include <QComboBox>
 
 HomeScreen::HomeScreen(QWidget *parent) : QWidget(parent)
 {
@@ -20,6 +21,10 @@ HomeScreen::HomeScreen(QWidget *parent) : QWidget(parent)
                   "}"
                   "QPushButton { "
                   " font-size: 20px; "
+                  "}"
+                  "QComboBox { "
+                  " font-size: 20px; "
+                  "color: #d7c73e;"
                   "}";
 
     this->setStyleSheet(css);
@@ -55,9 +60,14 @@ HomeScreen::HomeScreen(QWidget *parent) : QWidget(parent)
     btnStart->setFixedWidth(200);
 
     QHBoxLayout *navLayout = new QHBoxLayout();
+    gameModeSelector = new QComboBox(this);
+    gameModeSelector->addItem("Giocatore Singolo", 1); // Testo visibile e un ID/valore associato (opzionale)
+    gameModeSelector->addItem("In Coppia", 2);
     QPushButton *btnHallOfFame = new QPushButton("Classifica", this);
     QPushButton *btnRules = new QPushButton("Regole", this);
 
+    // aggiungi qui il selettore coppie - singolo
+    navLayout->addWidget(gameModeSelector);
     navLayout->addWidget(btnHallOfFame);
     navLayout->addWidget(btnRules);
 
@@ -114,4 +124,10 @@ void HomeScreen::handleStartGame()
     }
 
     emit startRequested(nome);
+}
+
+bool HomeScreen::isCoupleMode() const
+{
+    // Restituisce true se l'indice selezionato è quello di coppia
+    return (gameModeSelector->currentIndex() == 1);
 }

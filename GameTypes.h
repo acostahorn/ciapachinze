@@ -135,7 +135,7 @@ struct GameConfig
     GameMode mode = GameMode::Offline;
     int humanSeatIndex = 0;
     int botCount = 3;
-    bool giocoACoppie = false;
+    bool giocoACoppie = true;
     QVector<ProfileData> players;
 };
 
