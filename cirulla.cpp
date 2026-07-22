@@ -1208,24 +1208,34 @@ void Cirulla::playCard(int handIndex, QList<int> &tableIndices)
 
             int lastOneId = ultimoAPrendere.id;
 
-            for (auto &card : state.tableCards)
+            if (!state.tableCards.isEmpty())
             {
-                // outputArea->append("Carta aggiunta: " + card.faceValue);
-                ultimoAPrendere.prese.append(card);
+                updateOverlay("Le carte in tavola vanno a " + ultimoAPrendere.name, "", false);
+
+                for (auto &card : state.tableCards)
+                {
+                    ultimoAPrendere.prese.append(card);
+                }
             }
 
-            QTimer::singleShot(2000, this, [this, lastOneId]()
+            QTimer::singleShot(1500, this, [this, lastOneId]()
                                {
-                
-                if (this->state.phase != MatchPhase::Playing) return;
+    // 1. Dopo 1 secondo: svuota il tavolo e aggiorna la grafica
+    if (this->state.phase != MatchPhase::Playing) return;
 
-                PlayerState &player = this->state.seats[lastOneId];
-                this->aggiornaMazzoPrese(player);
-                this->state.tableCards.clear();
-                this->showTable();
-                
-                // Ora chiamiamo la fine gioco in sequenza sicura
-                this->handleEndOfGame(); });
+    PlayerState &player = this->state.seats[lastOneId];
+    this->aggiornaMazzoPrese(player);
+    this->state.tableCards.clear();
+    this->showTable();
+
+    // 2. Fai partire il secondo timer solo ORA, per altri 1000ms (totale 2s)
+    QTimer::singleShot(1500, this, [this]()
+    {
+        if (this->state.phase != MatchPhase::Playing) return;
+        
+        // 3. Dopo un altro secondo, vai alla schermata finale
+        this->handleEndOfGame();
+    }); });
             return; // Partita finita, non chiamare processTurn
         }
     }
@@ -1258,6 +1268,9 @@ void Cirulla::makeMove(int handIndex, QList<int> &tableIndices)
         lastPlayerToScore = state.currentTurnIndex;
         std::sort(tableIndices.begin(), tableIndices.end(), std::greater<int>());
         bool isScopa = (state.tableCards.size() == tableIndices.size());
+
+        if (isScopa && (state.currentTurnIndex == state.dealerIndex) && (giocatore.hand.size() == 1))
+            isScopa = false;
 
         if (isScopa)
         {
