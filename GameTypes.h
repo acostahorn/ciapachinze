@@ -72,6 +72,13 @@ struct ProfileData
             return 0.0;
         return (static_cast<double>(wonMatches) / playedMatches) * 100.0;
     }
+    double getRating() const
+    {
+        if (playedMatches == 0)
+            return 0.0;
+
+        return (static_cast<double>(wonMatches) + 2.5) / (playedMatches + 10) * 100.0;
+    }
 };
 
 struct Carta

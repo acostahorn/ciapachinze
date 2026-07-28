@@ -41,6 +41,7 @@ private:
     HomeScreen *homeScreen;
     QStackedWidget *stackedWidget;
     QWidget *gameArea;
+    QGridLayout *gameLayout;
     QWidget *scoreArea;
 
     QLabel *mazzoPreseIconArr[4];
@@ -56,7 +57,7 @@ private:
     QHBoxLayout *handLayout;
 
     // --- Containers/Widgets ---
-    QTextEdit *outputArea;
+    // QTextEdit *outputArea;
 
     QFrame *infoOverlay;
     QHBoxLayout *overlayLayout;
@@ -65,11 +66,7 @@ private:
     QPushButton *button;
 
     QGroupBox *tableContainer;
-    QGroupBox *handContainer;
-
-    QWidget *p2StatsContainer;
-
-    // --- main player taken and scope labels
+    QWidget *handContainer;
 
     QLabel *PGAvatar;
     QLabel *mazzoPreseIcon;
@@ -78,7 +75,6 @@ private:
 
     // Assuming player containers are widgets (e.g., QFrame or QGroupBox)
     QWidget *player0Container;
-    QWidget *p0StatsContainer;
     QLabel *P0Avatar;
 
     QLabel *mazzoPreseP0Icon;
@@ -144,8 +140,8 @@ private:
 
     // *******TEST SWITCH********
 
-    bool isTestMode = false;
-    bool botGame = true;
+    bool isTestMode = true;
+    bool botGame = false;
     int waitTime = botGame == true ? 0 : 1000;
 
     GamePhase currentGamePhase;

@@ -74,51 +74,53 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
         "   border-radius: 12px; "       // Arrotondamento più morbido
         "}";
 
+    QString containerStyle =
+        "QWidget { "
+        "background-color: qradialgradient(cx:0.5, cy:0.5, radius:0.8, fx:0.5, fy:0.5, stop:0 #c99ecc, stop:1 #d672ea); "
+        "}";
+
     // CONTAINERS
 
     // Top Player (centered)
     player0Container = new QWidget(this);
-    p0StatsContainer = new QWidget(this);
+    player0Container->setFixedWidth(800);
+    // player0Container->setStyleSheet(playerStyle);
+    player0Container->setStyleSheet(containerStyle);
 
-    QHBoxLayout *player0Layout = new QHBoxLayout(player0Container);
-    player0Layout->setAlignment(Qt::AlignCenter);
-    player0Container->setMinimumSize(100, 150);
+    // QHBoxLayout *player0Layout = new QHBoxLayout(player0Container);
+    // player0Layout->setAlignment(Qt::AlignCenter);
 
     // Side Players
 
     // Per il Giocatore 1
     player1Container = new QWidget(this);
-    QVBoxLayout *layout1 = new QVBoxLayout(player1Container); // Questo è NECESSARIO per evitare crash
-    layout1->setContentsMargins(5, 5, 5, 5);
 
     player1Container->setMinimumSize(100, 400);
-    player1Container->setStyleSheet(playerStyle);
+    player1Container->setStyleSheet(containerStyle);
 
     // Per il Giocatore 3
     player3Container = new QWidget(this);
-    player3Container->setStyleSheet(playerStyle);
-    QVBoxLayout *layout3 = new QVBoxLayout(player3Container); // Questo è NECESSARIO per evitare crash
-    layout3->setContentsMargins(5, 5, 5, 5);
+    player3Container->setStyleSheet(containerStyle);
     player3Container->setMinimumSize(100, 400);
 
     // Apply size policies for all
-    auto setContainerStyle = [](QWidget *container)
+    auto setContainerStyle = [](QWidget *container, int width, int height)
     {
-        container->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+        container->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+        container->setFixedSize(width, height); // Blocca fisicamente le dimensioni
     };
-    setContainerStyle(player0Container);
-    setContainerStyle(player1Container);
-    setContainerStyle(player3Container);
+
+    setContainerStyle(player0Container, 550, 150);
 
     // 2. Main Layout (Vertical)
     mainLayout = new QVBoxLayout(this);
 
     // 3. Output Area (Separate, full-width row)
-    outputArea = new QTextEdit(this);
-    outputArea->setReadOnly(true);
-    outputArea->setMaximumHeight(10);
-    outputArea->hide();
-    mainLayout->addWidget(outputArea);
+    // outputArea = new QTextEdit(this);
+    // outputArea->setReadOnly(true);
+    // outputArea->setMaximumHeight(10);
+    // outputArea->hide();
+    // mainLayout->addWidget(outputArea);
 
     infoOverlay = new QFrame(this);
     infoOverlay->setStyleSheet("font-weight: bold; font-size: 18px;");
@@ -145,51 +147,40 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
 
     gameArea = new QWidget(this);
 
-    QVBoxLayout *gameLayout = new QVBoxLayout(gameArea);
+    gameLayout = new QGridLayout(gameArea);
     gameLayout->setContentsMargins(0, 0, 0, 0); // Nessun margine extra
 
-    // 4. Top Row (Player 0 centered)
-    // 1. Il contenitore delle statistiche
-    p0StatsContainer = new QWidget(this);
+    gameLayout->setColumnStretch(0, 0); // Fissa larghezza Ovest
+    gameLayout->setColumnStretch(1, 1); // Il Tavolo centrale si espande!
+    gameLayout->setColumnStretch(2, 0); // Fissa larghezza Est
 
-    QVBoxLayout *statsLayoutP0 = new QVBoxLayout(p0StatsContainer); // Assegnato qui!
+    gameLayout->setRowStretch(0, 0); // Fissa altezza Nord
+    gameLayout->setRowStretch(1, 1); // Il Tavolo centrale si espande!
+    gameLayout->setRowStretch(2, 0); // Fissa altezza Sud
 
     mazzoPreseP0Icon = new QLabel(this);
     mazzoScopeP0Icon = new QLabel(this);
-    mazzoPreseP0Icon->setFixedHeight(70);
-    mazzoScopeP0Icon->setFixedHeight(70);
+
     mazzoP0Text = new QLabel("Prese: 0\nScope: 0", this);
+
     P0Avatar = new QLabel(this);
     P0Avatar->setFixedSize(100, 130);
 
-    // 2. Aggiungi le label al layout del contenitore
-    statsLayoutP0->addWidget(mazzoScopeP0Icon);
-    statsLayoutP0->addWidget(mazzoPreseP0Icon);
-    statsLayoutP0->addWidget(mazzoP0Text);
+    // --- BLOCCO NORD (Giocatore in alto) ---
+    QWidget *northPlayerPanel = new QWidget(this);
+    northPlayerPanel->setStyleSheet(playerStyle);
+    setContainerStyle(northPlayerPanel, 900, 200);
 
-    // 3. Ora p0StatsContainer è "pieno" di statistiche.
-    // Possiamo metterlo nel Grid insieme al contenitore delle carte (player0Container)
-    QGridLayout *middleTopGrid = new QGridLayout();
-    QWidget *p0Wrapper = new QWidget(this);
-    p0Wrapper->setStyleSheet(playerStyle);
-    QHBoxLayout *wrapper0Layout = new QHBoxLayout(p0Wrapper);
-    wrapper0Layout->setContentsMargins(5, 5, 5, 5);
-    wrapper0Layout->setSpacing(10);
-    p0StatsContainer->setFixedWidth(120);
-    p0StatsContainer->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
+    QHBoxLayout *northLayout = new QHBoxLayout(northPlayerPanel);
+    northLayout->addWidget(P0Avatar);
+    northLayout->addWidget(mazzoScopeP0Icon);
+    northLayout->addWidget(mazzoPreseP0Icon);
+    northLayout->addWidget(mazzoP0Text);
 
-    p0Wrapper->setFixedWidth(800);
-    // player0Container->setFixedHeight(200);
+    QHBoxLayout *p0Layout = new QHBoxLayout(player0Container);
+    northLayout->addWidget(player0Container);
 
-    wrapper0Layout->addWidget(P0Avatar);
-    wrapper0Layout->addWidget(p0StatsContainer);
-    wrapper0Layout->addWidget(player0Container);
-    middleTopGrid->addWidget(p0Wrapper, 0, 0, Qt::AlignCenter);
-
-    gameLayout->addLayout(middleTopGrid, 1);
-
-    // 5. Middle Zone (Using GridLayout for better table control)
-    QGridLayout *middleGrid = new QGridLayout();
+    gameLayout->addWidget(northPlayerPanel, 0, 1, Qt::AlignCenter); // Sopra
 
     mazzoPreseP3Icon = new QLabel(this);
     mazzoScopeP3Icon = new QLabel(this);
@@ -206,32 +197,6 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
     mazzoScopeP1Icon->setFixedHeight(100);
     mazzoScopeP1Icon->setFixedHeight(100);
 
-    layout3->addWidget(mazzoPreseP3Icon);
-    layout3->addWidget(mazzoScopeP3Icon);
-    layout3->addWidget(mazzoP3Text);
-    layout3->addWidget(P3Avatar);
-
-    layout1->addWidget(mazzoPreseP1Icon);
-    layout1->addWidget(mazzoScopeP1Icon);
-    layout1->addWidget(mazzoP1Text);
-    layout1->addWidget(P1Avatar);
-
-    middleGrid->setColumnStretch(0, 1);
-    middleGrid->setColumnStretch(1, 1);
-    middleGrid->setColumnStretch(2, 8); // Il tavolo domina
-    middleGrid->setColumnStretch(3, 1);
-    middleGrid->setColumnStretch(4, 1);
-
-    middleGrid->addWidget(mazzoScopeP1Icon, 1, 0);
-    middleGrid->addWidget(P1Avatar, 0, 0);
-    middleGrid->addWidget(mazzoPreseP1Icon, 2, 0);
-    middleGrid->addWidget(mazzoP1Text, 3, 0);
-
-    middleGrid->addWidget(P3Avatar, 0, 4);
-    middleGrid->addWidget(mazzoScopeP3Icon, 1, 4);
-    middleGrid->addWidget(mazzoPreseP3Icon, 2, 4);
-    middleGrid->addWidget(mazzoP3Text, 3, 4);
-
     player1Container->setFixedWidth(100); // Scegli una misura che ti piace
     mazzoScopeP1Icon->setFixedWidth(100);
     mazzoP1Text->setFixedWidth(100);
@@ -245,11 +210,49 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
     player1Container->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     player3Container->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 
-    // Add side players to the sides
-    middleGrid->addWidget(player3Container, 0, 1);
-    middleGrid->addWidget(player1Container, 0, 3);
+    // --- BLOCCO OVEST (Giocatore a sinistra) ---
+    QWidget *westPlayerPanel = new QWidget(this);
+    westPlayerPanel->setStyleSheet(playerStyle);
+    setContainerStyle(westPlayerPanel, 240, 420);
+    QHBoxLayout *westLayout = new QHBoxLayout(westPlayerPanel); // In verticale perché sta sul lato
 
-    // Table
+    QWidget *westInfoWidget = new QWidget();
+    QVBoxLayout *westInfoLayout = new QVBoxLayout(westInfoWidget);
+    westInfoLayout->addWidget(P1Avatar);
+    westInfoLayout->addWidget(mazzoP1Text);
+
+    westInfoLayout->addWidget(mazzoScopeP1Icon);
+    westInfoLayout->addWidget(mazzoPreseP1Icon);
+
+    QVBoxLayout *p1Layout = new QVBoxLayout(player1Container);
+    westLayout->addWidget(westInfoWidget);
+
+    westLayout->addWidget(player1Container);
+    gameLayout->addWidget(westPlayerPanel, 1, 0, Qt::AlignCenter); // Sinistra
+
+    // BLOCCO EST -- Giocatore a destra
+
+    QWidget *eastPlayerPanel = new QWidget(this);
+    eastPlayerPanel->setStyleSheet(playerStyle);
+
+    setContainerStyle(eastPlayerPanel, 240, 420);
+
+    QWidget *eastInfoWidget = new QWidget();
+    QVBoxLayout *eastInfoLayout = new QVBoxLayout(eastInfoWidget);
+
+    QHBoxLayout *eastLayout = new QHBoxLayout(eastPlayerPanel);
+
+    eastInfoLayout->addWidget(P3Avatar);
+    eastInfoLayout->addWidget(mazzoP3Text);
+
+    eastInfoLayout->addWidget(mazzoScopeP3Icon);
+    eastInfoLayout->addWidget(mazzoPreseP3Icon);
+
+    QVBoxLayout *p3Layout = new QVBoxLayout(player3Container);
+    eastLayout->addWidget(player3Container);
+    eastLayout->addWidget(eastInfoWidget);
+    gameLayout->addWidget(eastPlayerPanel, 1, 2, Qt::AlignCenter); // Destra
+
     QGroupBox *tableContainer = new QGroupBox();
 
     tableContainer->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
@@ -267,65 +270,41 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
     tableLayout = new QGridLayout(tableContainer);
     tableLayout->setAlignment(Qt::AlignCenter);
     tableContainer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    gameLayout->addWidget(tableContainer, 1, 1, Qt::AlignCenter); // Centro
 
     // Add table to center column and make it stretch
-    middleGrid->addWidget(tableContainer, 0, 2, 1, 1);
-    middleGrid->setColumnStretch(1, 4); // Table gets 5x the width of side columns
 
-    gameLayout->addLayout(middleGrid, 5);
-    middleGrid->setRowStretch(0, 10);
+    QWidget *handContainer = new QWidget(this);
 
-    // 6. Bottom Zone (Your hand)
-    p2StatsContainer = new QWidget(this);
+    handContainer->setStyleSheet(containerStyle);
 
-    QGroupBox *handContainer = new QGroupBox(this);
-    handContainer->setFlat(true);
+    setContainerStyle(handContainer, 550, 150);
 
-    handContainer->setFixedWidth(800);
-
-    handContainer->setStyleSheet(
-        "QGroupBox { "
-        "   border: 1px solid #34495e; " // Bordo discreto, non elettrico
-        "   border-radius: 12px; "       // Arrotondamento più morbido
-        "}");
-    QHBoxLayout *handZoneLayout = new QHBoxLayout(handContainer);
-    handContainer->setFixedHeight(230);
-    // A. Zona Statistiche
     PGAvatar = new QLabel(this);
     PGAvatar->setFixedSize(100, 130);
-    p2StatsContainer->setFixedWidth(100);
-    p2StatsContainer->setStyleSheet(playerStyle);
-    QVBoxLayout *statsLayout = new QVBoxLayout(p2StatsContainer);
 
     mazzoPreseIcon = new QLabel();
     mazzoText = new QLabel("Scope: 0\nPrese: 0", this);
     mazzoScopeIcon = new QLabel();
 
-    statsLayout->addWidget(mazzoScopeIcon);
-    statsLayout->addWidget(mazzoPreseIcon);
-    statsLayout->addWidget(mazzoText);
+    // --- BLOCCO SUD (Il tuo giocatore in basso) ---
+    QWidget *southPlayerPanel = new QWidget(this);
+    setContainerStyle(southPlayerPanel, 900, 200);
+    southPlayerPanel->setStyleSheet(playerStyle);
 
-    // B. Zona Carte (Il trucco qui)
-    QWidget *cardsWrapper = new QWidget(); // Questo serve solo per lo stile
-    cardsWrapper->setStyleSheet(playerStyle);
+    QHBoxLayout *southLayout = new QHBoxLayout(southPlayerPanel); // Orizzontale in basso
+    southLayout->addWidget(PGAvatar);
+    southLayout->addWidget(mazzoScopeIcon);
+    southLayout->addWidget(mazzoPreseIcon);
+    southLayout->addWidget(mazzoText);
 
-    // cardsWrapper->setFixedHeight(200);
-    // Creiamo l'handLayout dentro il wrapper, così le funzioni lo trovano
-    handLayout = new QHBoxLayout(cardsWrapper);
-    handLayout->setAlignment(Qt::AlignCenter);
+    handLayout = new QHBoxLayout(handContainer);
 
-    // C. Assemblaggio finale
-    handZoneLayout->addWidget(PGAvatar);
-    handZoneLayout->addWidget(p2StatsContainer);
-    handZoneLayout->addWidget(cardsWrapper); // Aggiungiamo il wrapper, non handLayout!
+    southLayout->addWidget(handContainer);
+    gameLayout->addWidget(southPlayerPanel, 2, 1, Qt::AlignCenter); // Sotto
 
     gameLayout->setAlignment(Qt::AlignCenter);
     mainLayout->setAlignment(Qt::AlignCenter);
-    QHBoxLayout *handWrapper = new QHBoxLayout();
-    handWrapper->addStretch();             // Spinge a destra
-    handWrapper->addWidget(handContainer); // Il widget sta al centro
-    handWrapper->addStretch();
-    gameLayout->addLayout(handWrapper, 2);
 
     stackedWidget->addWidget(gameArea);
 
@@ -366,6 +345,28 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
     {
         mazzoScopeIconArr[i]->setStyleSheet("QLabel {border: none}");
         mazzoPreseIconArr[i]->setStyleSheet("QLabel {border: none}");
+        mazzoTextArr[i]->setStyleSheet(playerStyle);
+        mazzoTextArr[i]->setFixedHeight(100);
+        avatarArr[i]->setStyleSheet(playerStyle);
+
+        mazzoPreseIconArr[i]->setFixedSize(60, 90); // Adatta le misure alle tue carte
+        mazzoPreseIconArr[i]->setScaledContents(true);
+        mazzoPreseIconArr[i]->setFixedHeight(70);
+        mazzoScopeIconArr[i]->setFixedHeight(70);
+        mazzoPreseIconArr[i]->setFixedWidth(50);
+        mazzoScopeIconArr[i]->setFixedWidth(50);
+
+        // 2. Forza la SizePolicy a mantenere lo spazio riservato anche se hidden/vuoto
+        QSizePolicy sp = mazzoPreseIconArr[i]->sizePolicy();
+        sp.setHorizontalPolicy(QSizePolicy::Fixed);
+        sp.setVerticalPolicy(QSizePolicy::Fixed);
+        sp.setRetainSizeWhenHidden(true); // 👈 RISERVA LO SPAZIO ANCHE SE NASCOSTO!
+        mazzoPreseIconArr[i]->setSizePolicy(sp);
+        QSizePolicy sc = mazzoScopeIconArr[i]->sizePolicy();
+        sc.setHorizontalPolicy(QSizePolicy::Fixed);
+        sc.setVerticalPolicy(QSizePolicy::Fixed);
+        sc.setRetainSizeWhenHidden(true); // 👈 RISERVA LO SPAZIO ANCHE SE NASCOSTO!
+        mazzoScopeIconArr[i]->setSizePolicy(sc);
     };
 
     // Score Area Setup - AREA PUNTEGGIO
@@ -520,7 +521,7 @@ void Cirulla::executeDeal()
     {
         if (!state.seats[i].hand.isEmpty())
         {
-            outputArea->append("ERRORE: Tentata distribuzione con carte ancora in mano!");
+            // outputArea->append("ERRORE: Tentata distribuzione con carte ancora in mano!");
             return; // Blocca la distribuzione!
         }
     }
@@ -529,7 +530,7 @@ void Cirulla::executeDeal()
 
     if (isTestMode)
     {
-        outputArea->append("TEST TEST TEST TEST TEST");
+        // outputArea->append("TEST TEST TEST TEST TEST");
         state.deck = generateTestDeck();
     }
     else
@@ -544,14 +545,20 @@ void Cirulla::executeDeal()
 
     for (int i = 0; i < 4; i++)
     {
+        int indiceGiocatore = (state.dealerIndex + 1 + i) % 4;
+
+        PlayerState &giocatore = state.seats[indiceGiocatore];
         QString mano;
-        for (auto &c : state.seats[i].hand)
-            mano += QString::number(c.faceValue) + " ";
-        // outputArea->append("DEBUG: Mano Giocatore " + QString::number(i) + ": " + mano);
+        for (auto &c : giocatore.hand)
+            mano += QString::number(c.id) + " ";
+        fprintf(stderr, "DEBUG: Mano Giocatore %d: %s\n", indiceGiocatore, mano.toStdString().c_str());
+        fflush(stderr);
     }
 
     showHands();
     showTable();
+    fprintf(stderr, "controllo che il mazziere non faccia punto");
+    fflush(stderr);
     dealersChance();
     processTurn();
 }
@@ -610,32 +617,33 @@ void Cirulla::initialDeal()
 
     int playerIndex = 0; // Contatore reale per i giocatori
 
+    // 1. Reset delle mani, scope e prese per tutti
     for (auto &player : state.seats)
     {
         player.hand.clear();
         player.scope.clear();
         player.prese.clear();
         player.totaleScope = 0;
+    }
 
-        for (int i = 0; i < 3; ++i)
+    // 2. Distribuzione delle carte in mano partendo da chi siede DOPO il mazziere
+    // (Presupponendo che si distribuiscano 3 carte a testa, come da codice originale)
+    for (int i = 0; i < 3; ++i) // Giro di carte (es. 3 carte ciascuno)
+    {
+        for (int p = 0; p < 4; ++p)
         {
+            // Calcola l'indice del giocatore in senso circolare partendo dal dealer
+            int indiceGiocatore = (state.dealerIndex + 1 + p) % 4;
+            PlayerState &giocatore = state.seats[indiceGiocatore];
+
             if (state.deckIndex < state.deck.size())
             {
                 Carta c = state.deck[state.deckIndex];
-                player.hand.append(c);
-
-                // LOG CORRETTO: ora vediamo davvero chi riceve cosa
-                outputArea->append("Giocatore " + QString::number(playerIndex) +
-                                   " riceve carta ID: " + QString::number(c.id) +
-                                   " (Valore: " + QString::number(c.faceValue) +
-                                   ") | Indice: " + QString::number(state.deckIndex));
-
+                giocatore.hand.append(c);
                 state.deckIndex++;
             }
         }
-        playerIndex++; // Incrementa l'indice del giocatore
     }
-
     // 3. Table Cards
     state.tableCards.clear();
     for (int i = 0; i < 4; ++i)
@@ -707,7 +715,7 @@ void Cirulla::dealersChance()
 
     if (state.tableCards.isEmpty())
     {
-        outputArea->append("DEBUG: dealersChance saltato, tavolo vuoto.");
+        // outputArea->append("DEBUG: dealersChance saltato, tavolo vuoto.");
         return;
     }
     bool mattaPresente = contieneMatta(state.tableCards);
@@ -722,13 +730,13 @@ void Cirulla::dealersChance()
     }
 
     QString totalString = QString("Totale sul tavolo: %1").arg(total);
-    outputArea->append(totalString);
+    // outputArea->append(totalString);
 
     if (total == 15 || total == 30)
     {
         QString messaggio = (total == 15) ? "Scopa per il mazziere!" : "Due scope per il mazziere!";
 
-        outputArea->append(messaggio);
+        // outputArea->append(messaggio);
 
         if (total == 15)
         {
@@ -755,7 +763,7 @@ void Cirulla::dealersChance()
 
         state.tableCards.clear();
         showTable(); // Aggiorna il tavolo solo dopo la pausa
-        outputArea->append("Il tavolo è stato ripulito.");
+        // outputArea->append("Il tavolo è stato ripulito.");
         statoAttualeBottone = FaseBottone::DopoScopaMazziere;
     }
 }
@@ -785,6 +793,8 @@ void Cirulla::renderHandToLayout(const PlayerState &p, QLayout *targetLayout)
         cardLabel->setProperty("cardIndex", i);
         cardLabel->setProperty("type", "hand");
         cardLabel->setProperty("isClickable", isMe);
+        cardLabel->setFixedSize(80, 120);
+        cardLabel->setAlignment(Qt::AlignCenter);
 
         QString path;
         if (isMe || isRevealed)
@@ -843,15 +853,9 @@ QVector<Carta> Cirulla::generateTestDeck()
 {
     QVector<Carta> deck;
     deck.reserve(40);
-    // Vettore 0-39 (Indici 0-39)
-    // Posizioni 16, 17, 18 (Indici 15, 16, 17): 1, 2, 3
     QVector<int> fisse = {
-        // 0-14
-        35, 12, 7, 22, 39, 4, 18, 29, 0, 33, 11, 25, 8, 36, 14,
-        // 15, 16, 17 (I tuoi numeri: 1, 2, 3)
-        1, 2, 3,
-        // 18-39
-        30, 19, 5, 26, 9, 37, 15, 21, 6, 32, 10, 27, 13, 38, 20, 28, 24, 34, 17, 31, 23, 16};
+
+        10, 2, 18, 11, 24, 16, 23, 8, 9, 4, 38, 39};
 
     // Lista delle carte che vogliamo "blindare" in cima
 
@@ -900,7 +904,7 @@ int Cirulla::selectDealer()
 
     int round = 1;
 
-    outputArea->append("--- Estrazione del Mazziere ---");
+    // outputArea->append("--- Estrazione del Mazziere ---");
 
     while (active_players.size() > 1)
     {
@@ -908,7 +912,7 @@ int Cirulla::selectDealer()
         int max_value = -1;
 
         QString roundMsg = QString("Turno di spareggio %1:").arg(round);
-        outputArea->append(roundMsg);
+        // outputArea->append(roundMsg);
 
         for (int player : active_players)
         {
@@ -917,10 +921,10 @@ int Cirulla::selectDealer()
 
             state.tableCards.append(current_card);
 
-            QString drawMsg = QString("%1 ha pescato il valore: %2")
-                                  .arg(state.seats[player].name)
-                                  .arg(value);
-            outputArea->append(drawMsg);
+            // QString drawMsg = QString("%1 ha pescato il valore: %2")
+            //                       .arg(state.seats[player].name)
+            //                       .arg(value);
+            // outputArea->append(drawMsg);
 
             if (value > max_value)
             {
@@ -940,7 +944,7 @@ int Cirulla::selectDealer()
             QString tieMsg = "Pareggio tra i giocatori: ";
             for (int p : tied_players)
                 tieMsg += QString("%1 ").arg(p);
-            outputArea->append(tieMsg + "\n");
+            // outputArea->append(tieMsg + "\n");
         }
 
         active_players = tied_players;
@@ -985,13 +989,13 @@ void Cirulla::showHands()
             renderHandToLayout(state.seats[config.humanSeatIndex], handLayout);
             break;
         case 1: // Right (Player 3)
-            renderHandToLayout(player, player1Container->layout());
+            renderHandToLayout(player, player3Container->layout());
             break;
         case 2: // Top (Player 0)
             renderHandToLayout(player, player0Container->layout());
             break;
         case 3: // Left (Player 1)
-            renderHandToLayout(player, player3Container->layout());
+            renderHandToLayout(player, player1Container->layout());
             break;
         }
     }
@@ -1022,7 +1026,7 @@ void Cirulla::processTurn()
     if (currentPlayerIndex < 0 || currentPlayerIndex >= state.seats.size())
         return;
     updateOverlay("Turno: " + state.seats[currentPlayerIndex].name, "", false);
-    outputArea->append("Turno: " + state.seats[currentPlayerIndex].name);
+    // outputArea->append("Turno: " + state.seats[currentPlayerIndex].name);
 
     bool isStartOfHand = (state.seats[currentPlayerIndex].hand.size() == 3);
     bool notYetDeclared = (!state.seats[currentPlayerIndex].carteScoperte);
@@ -1060,7 +1064,7 @@ void Cirulla::processTurn()
     {
         // Abilitiamo il clic sulle carte nella mano del giocatore
         enableHandInteraction(true);
-        outputArea->append("Tocca a te! Clicca su una carta.");
+        // outputArea->append("Tocca a te! Clicca su una carta.");
 
         // analisi trasparente delle mosse
         const auto &miaMano = state.seats[config.humanSeatIndex].hand;
@@ -1078,7 +1082,7 @@ void Cirulla::processTurn()
 
         if (!totaleMosseValide)
         {
-            outputArea->append("Nessuna presa possibile. Puoi calare una carta qualsiasi.");
+            // outputArea->append("Nessuna presa possibile. Puoi calare una carta qualsiasi.");
         }
     }
     else
@@ -1193,7 +1197,7 @@ void Cirulla::playCard(int handIndex, QList<int> &tableIndices)
             // l'ultimo svuota il tavolo
 
             PlayerState &ultimoAPrendere = state.seats[lastPlayerToScore];
-            outputArea->append("Le carte rimaste sul tavolo vanno all'ultimo giocatore che ha preso: " + config.players[ultimoAPrendere.id].name);
+            // outputArea->append("Le carte rimaste sul tavolo vanno all'ultimo giocatore che ha preso: " + config.players[ultimoAPrendere.id].name);
 
             for (auto &carta : state.deck)
             {
@@ -1274,7 +1278,7 @@ void Cirulla::makeMove(int handIndex, QList<int> &tableIndices)
 
         if (isScopa)
         {
-            outputArea->append("SCOPA!");
+            // outputArea->append("SCOPA!");
             ++giocatore.totaleScope;
             giocatore.scope.append(giocata); // La carta che ha fatto scopa va nelle scope
 
@@ -1340,7 +1344,7 @@ void Cirulla::botPlay()
         QVector<Mossa> prese = trovaTutteLePrese(i);
         if (prese.isEmpty())
         {
-            // Se non ci sono prese, aggiungiamo una mossa di "scarto"
+
             Mossa scarto;
             scarto.handIndex = i;
             scarto.tableIndices = {};
@@ -1360,7 +1364,7 @@ void Cirulla::botPlay()
         // --- LOGICA ANTI-AUTOLESIONISMO ---
         // Se è una mossa di scarto (tableIndices vuoto) e gioco un Asso...
         Carta c = bot.hand[m.handIndex];
-        if (m.tableIndices.isEmpty() && c.faceValue == 1)
+        if ((m.tableIndices.isEmpty() && c.faceValue == 1) || (m.tableIndices.isEmpty() && c.isMatta()))
         {
             // ...e ho altre carte in mano...
             if (bot.hand.size() > 1)
@@ -1394,7 +1398,7 @@ void Cirulla::validateAndPlay()
     // A. Controlli preliminari
     if (selectedHandCardIndex == -1)
     {
-        outputArea->append("Seleziona una carta dalla mano!");
+        // outputArea->append("Seleziona una carta dalla mano!");
         return;
     }
 
@@ -1419,8 +1423,12 @@ void Cirulla::validateAndPlay()
             }
         }
         if (!mossaValida)
-            outputArea->append("Presa non valida!");
+        {
+            fprintf(stderr, "presa non valida!");
+            fflush(stderr);
+        }
     }
+    // outputArea->append("Presa non valida!");
     else
     {
         // CASO 2: L'utente vuole calare (non ha selezionato carte sul tavolo)
@@ -1430,7 +1438,7 @@ void Cirulla::validateAndPlay()
         }
         else
         {
-            outputArea->append("Non puoi calare: hai delle prese possibili!");
+            // outputArea->append("Non puoi calare: hai delle prese possibili!");
         }
     }
 
@@ -1480,13 +1488,13 @@ void Cirulla::keyPressEvent(QKeyEvent *event)
                 }
                 else
                 {
-                    outputArea->append("Hai delle prese disponibili, non puoi scartare!");
+                    // outputArea->append("Hai delle prese disponibili, non puoi scartare!");
                 }
             }
         }
         else
         {
-            outputArea->append("Seleziona prima una carta in mano!");
+            // outputArea->append("Seleziona prima una carta in mano!");
         }
     }
     else
@@ -1531,9 +1539,9 @@ QVector<Mossa> Cirulla::trovaTutteLePrese(int handIndex)
     // 2. PROTEZIONE CRITICA: Indice mano valido? Mano non vuota?
     if (handIndex < 0 || handIndex >= giocatore.hand.size())
     {
-        outputArea->append(QString("ERRORE: Accesso a indice mano %1 non valido (Size: %2)")
-                               .arg(handIndex)
-                               .arg(giocatore.hand.size()));
+        // outputArea->append(QString("ERRORE: Accesso a indice mano %1 non valido (Size: %2)")
+        //                        .arg(handIndex)
+        //                        .arg(giocatore.hand.size()));
         return QVector<Mossa>();
     }
 
@@ -1693,13 +1701,13 @@ void Cirulla::updatePlayerUI(int playerIndex)
         targetLayout = handLayout;
         break;
     case 1:
-        targetLayout = player1Container->layout();
+        targetLayout = player3Container->layout();
         break;
     case 2:
         targetLayout = player0Container->layout();
         break;
     case 3:
-        targetLayout = player3Container->layout();
+        targetLayout = player1Container->layout();
         break;
     }
 
@@ -1722,18 +1730,17 @@ void Cirulla::updatePlayerUI(int playerIndex)
 
 void Cirulla::dealNextRound()
 {
-    // fprintf(stderr, "Diamo le carte!\n");
-    // fflush(stderr);
-    outputArea->append(QString("indice delle carte: %1").arg(state.deckIndex));
-    // Distribuisci 3 carte a ciascuno
-
-    for (auto &player : state.seats)
+    // Distribuisci 3 carte a ciascuno, una alla volta seguendo il giro dal dealer
+    for (int i = 0; i < 3; ++i) // Per ognuno dei 3 giri di carte
     {
-        for (int i = 0; i < 3; ++i)
+        for (int p = 0; p < 4; ++p) // Per ciascun giocatore in senso circolare
         {
+            int indiceGiocatore = (state.dealerIndex + 1 + p) % 4; // Nota: usa numGiocatori
+            PlayerState &giocatore = state.seats[indiceGiocatore];
+
             if (state.deckIndex < state.deck.size())
             {
-                player.hand.append(state.deck[state.deckIndex++]);
+                giocatore.hand.append(state.deck[state.deckIndex++]);
             }
         }
     }
@@ -1762,7 +1769,7 @@ void Cirulla::handleEndOfGame()
     // visualizza schermo punteggi
 
     stackedWidget->setCurrentIndex(2);
-    outputArea->clear();
+    // outputArea->clear();
 
     QString manoText = QString("MANO N. %1").arg(state.hand + 1);
 
@@ -1818,7 +1825,7 @@ void Cirulla::handleEndOfGame()
         }
     }
 
-    outputArea->append("Primiera:");
+    // outputArea->append("Primiera:");
 
     int limite = config.giocoACoppie ? 2 : 4;
 
@@ -1880,7 +1887,7 @@ void Cirulla::handleEndOfGame()
                                .arg(state.seats[i].punteggi[state.hand].primieraCarte[j].faceValue)
                                .arg(cartaSemeToString(state.seats[i].punteggi[state.hand].primieraCarte[j].seme)); // Usa una funzione helper
 
-            outputArea->insertPlainText(info);
+            // outputArea->insertPlainText(info);
 
             if (state.seats[i].punteggi[state.hand].primieraCarte[j].faceValue > 0)
             {
@@ -1890,7 +1897,7 @@ void Cirulla::handleEndOfGame()
             }
         }
 
-        outputArea->append("");
+        // outputArea->append("");
 
         primieraLayout[i]->addWidget(primieraText[i]);
 
@@ -2018,8 +2025,8 @@ void Cirulla::handleEndOfGame()
             updateOverlay(" CONTINUA IL GIOCO", "CONTINUA", true);
             statoAttualeBottone = FaseBottone::FaseFineTurno;
 
-            outputArea->append("Punteggio parziale: Squadra A " + QString::number(puntiSquadraA) +
-                               " - Squadra B " + QString::number(puntiSquadraB));
+            // outputArea->append("Punteggio parziale: Squadra A " + QString::number(puntiSquadraA) +
+            //                    " - Squadra B " + QString::number(puntiSquadraB));
         }
     }
     else if (state.hand > 1)
@@ -2235,17 +2242,17 @@ void Cirulla::applyBuonaDaDieci(int playerIndex)
 
 void Cirulla::applyBuonaDaTre(int playerIndex)
 {
-    outputArea->append("--- START BUONA DA TRE ---");
-    outputArea->append("Giocatore che accusa:" + state.seats[playerIndex].name);
-    outputArea->append("Carte in mano (prima della modifica):");
+    // outputArea->append("--- START BUONA DA TRE ---");
+    // outputArea->append("Giocatore che accusa:" + state.seats[playerIndex].name);
+    // outputArea->append("Carte in mano (prima della modifica):");
     for (auto &c : state.seats[playerIndex].hand)
     {
-        outputArea->append(QString("ID: %1 Valore: %2").arg(c.id).arg(c.faceValue));
+        // outputArea->append(QString("ID: %1 Valore: %2").arg(c.id).arg(c.faceValue));
     }
 
     if (playerIndex < 0 || playerIndex >= state.seats.size())
     {
-        outputArea->append("ERRORE CRITICO: Indice giocatore non valido!");
+        // outputArea->append("ERRORE CRITICO: Indice giocatore non valido!");
         return;
     }
     {
@@ -2355,7 +2362,7 @@ Score Cirulla::calcolaPunteggio(const QVector<Carta> &totaleCarte, int totaleSco
         }
     }
 
-    outputArea->append("PICCOLA:");
+    // outputArea->append("PICCOLA:");
 
     for (Carta carta : piccola)
     {
@@ -2365,7 +2372,7 @@ Score Cirulla::calcolaPunteggio(const QVector<Carta> &totaleCarte, int totaleSco
                            .arg(carta.faceValue)
                            .arg(cartaSemeToString(carta.seme)); // Usa una funzione helper
 
-        outputArea->insertPlainText(info);
+        // outputArea->insertPlainText(info);
     }
 
     int piccolaSize = piccola.length();

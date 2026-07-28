@@ -25,7 +25,7 @@ HallOfFameDialog::HallOfFameDialog(QWidget *parent) : QDialog(parent)
     titleLabel->setStyleSheet("font-size: 70px; font-family: 'Montserrat', 'Roboto', sans-serif; font-weight: 700; color: #fde3ef; margin: 10px;");
     layout->addWidget(titleLabel);
 
-    QTableWidget *table = new QTableWidget(0, 4, this);
+    QTableWidget *table = new QTableWidget(0, 6, this);
 
     table->setStyleSheet("background-color: rgba(0, 0, 0, 150); " // Sfondo semi-trasparente
                          "color: white; font-size: 16px;");
@@ -37,7 +37,7 @@ HallOfFameDialog::HallOfFameDialog(QWidget *parent) : QDialog(parent)
 
     layout->addWidget(table);
 
-    table->setHorizontalHeaderLabels({"Posizione", "Nome", "Partite", "Win Rate"});
+    table->setHorizontalHeaderLabels({"Posizione", "Nome", "Partite", "Partite Vinte", "Win Rate", "Rating"});
 
     auto players = CharacterManager::getAllPlayers();
 
@@ -66,20 +66,22 @@ HallOfFameDialog::HallOfFameDialog(QWidget *parent) : QDialog(parent)
     // }
 
     std::sort(sortedPlayers.begin(), sortedPlayers.end(), [](const ProfileData &a, const ProfileData &b)
-              { return a.getWinRate() > b.getWinRate(); });
+              { return a.getRating() > b.getRating(); });
 
     table->setRowCount(sortedPlayers.size());
 
     int rank = 1;
     for (int i = 0; i < sortedPlayers.size(); ++i)
     {
-        if (i > 0 && sortedPlayers[i].getWinRate() < sortedPlayers[i - 1].getWinRate())
+        if (i > 0 && sortedPlayers[i].getRating() < sortedPlayers[i - 1].getRating())
             ++rank;
 
         QTableWidgetItem *nameItem = new QTableWidgetItem(sortedPlayers[i].name);
         QTableWidgetItem *rankItem = new QTableWidgetItem(QString::number(rank));
         QTableWidgetItem *matchesItem = new QTableWidgetItem(QString::number(sortedPlayers[i].playedMatches));
+        QTableWidgetItem *wonMatchesItem = new QTableWidgetItem(QString::number(sortedPlayers[i].wonMatches));
         QTableWidgetItem *winRateItem = new QTableWidgetItem(QString::number(sortedPlayers[i].getWinRate(), 'f', 1) + "%");
+        QTableWidgetItem *ratingItem = new QTableWidgetItem(QString::number(sortedPlayers[i].getRating(), 'f', 1));
 
         // 2. Carica l'immagine (usa il path che hai salvato in ProfileData)
         // Assicurati che avatarPath sia il percorso corretto rispetto all'eseguibile
@@ -95,7 +97,9 @@ HallOfFameDialog::HallOfFameDialog(QWidget *parent) : QDialog(parent)
             rankItem->setForeground(goldColor);
             nameItem->setForeground(goldColor);
             matchesItem->setForeground(goldColor);
+            wonMatchesItem->setForeground(goldColor);
             winRateItem->setForeground(goldColor);
+            ratingItem->setForeground(goldColor);
 
             // Opzionale: rendiamolo anche in grassetto
             QFont font = nameItem->font();
@@ -108,7 +112,9 @@ HallOfFameDialog::HallOfFameDialog(QWidget *parent) : QDialog(parent)
         table->setItem(i, 0, new QTableWidgetItem(QString::number(rank)));
         // table->setItem(i, 1, new QTableWidgetItem(sortedPlayers[i].name));
         table->setItem(i, 2, new QTableWidgetItem(QString::number(sortedPlayers[i].playedMatches)));
-        table->setItem(i, 3, new QTableWidgetItem(QString::number(sortedPlayers[i].getWinRate(), 'f', 1) + "%"));
+        table->setItem(i, 3, new QTableWidgetItem(QString::number(sortedPlayers[i].wonMatches)));
+        table->setItem(i, 4, new QTableWidgetItem(QString::number(sortedPlayers[i].getWinRate(), 'f', 1) + "%"));
+        table->setItem(i, 5, new QTableWidgetItem(QString::number(sortedPlayers[i].getRating(), 'f', 1)));
     }
 }
 
