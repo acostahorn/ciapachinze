@@ -39,6 +39,7 @@ public:
 
 private:
     static QVector<ProfileData> m_registeredPlayers;
+    
 };
 
 #endif // CHARACTERMANAGER_H

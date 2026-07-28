@@ -8,12 +8,17 @@
 #include <QVector>
 #include <QDir>
 #include <QStandardPaths>
+#include <random>
 
 // --- QUESTA RIGA DEVE ESSERE QUI (fuori dalle funzioni) ---
 QVector<ProfileData> CharacterManager::m_registeredPlayers = {
-    {"Baciccia", "avatars/Baciccia.png", false},
-    {"Ugo", "avatars/Ugo.png", false},
-    {"Mussadiferro", "avatars/Mussadiferro.png", false},
+    {"Metirde", "avatars/Metirde.png", false},
+    {"Cesarin", "avatars/Cesarin.png", false},
+    {"Pippetto", "avatars/Pippetto.png", false},
+    {"Steva", "avatars/Steva.png", false},
+    {"Giggia", "avatars/Giggia.png", false},
+    {"Colomba", "avatars/Colomba.png", false},
+    {"Venanzio", "avatars/Venanzio.png", false},
     {"Alberto", "avatars/Alberto.png", true}};
 // ---------------------------------------------------------
 
@@ -51,10 +56,15 @@ QVector<ProfileData> CharacterManager::getPlayers(const QString humanPlayerName)
     // 2. Costruiamo il tavolo
     QVector<ProfileData> table;
 
-    table.append(botPlayers.value(0, {"Baciccia", "avatars/Baciccia.png", false}));
-    table.append(botPlayers.value(1, {"Ugo", "avatars/Ugo.png", false}));
+    std::random_device rd;
+    std::mt19937 g(rd());
+
+    std::shuffle(botPlayers.begin(), botPlayers.end(), g);
+
+    table.append(botPlayers[0]);
+    table.append(botPlayers[1]);
     table.append(humanPlayer);
-    table.append(botPlayers.value(2, {"Mussadiferro", "avatars/Mussadiferro.png", false}));
+    table.append(botPlayers[2]);
 
     return table;
 }
@@ -185,7 +195,6 @@ QString CharacterManager::getSaveFilePath()
 
 void CharacterManager::ensureBotsExist()
 {
-    QStringList botNames = {"Baciccia", "Ugo", "Mussadiferro"};
 
     for (const QString &name : botNames)
     {
