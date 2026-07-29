@@ -158,6 +158,6 @@ struct GameState
     int hand = 0;
 };
 
-static QStringList botNames = {"Baciccia", "Ugo", "Mussadiferro", "Steva", "Giggia", "Colomba", "Venanzio"};
+static QStringList botNames = {"Steva", "Giggia", "Colomba", "Venanzio", "Metirde", "Pippetto", "Cesarin"};
 
 #endif
