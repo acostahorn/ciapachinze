@@ -5,7 +5,13 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 
+if(WIN32)
+   
+    set(Qt6_DIR "C:/Qt/6.11.1/mingw_64/lib/cmake/Qt6")
+endif()
+
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
+
 
 add_executable(cirulla
     main.cpp
