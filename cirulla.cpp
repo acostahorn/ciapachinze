@@ -173,9 +173,9 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
 
     QHBoxLayout *northLayout = new QHBoxLayout(northPlayerPanel);
     northLayout->addWidget(P0Avatar);
+    northLayout->addWidget(mazzoP0Text);
     northLayout->addWidget(mazzoScopeP0Icon);
     northLayout->addWidget(mazzoPreseP0Icon);
-    northLayout->addWidget(mazzoP0Text);
 
     QHBoxLayout *p0Layout = new QHBoxLayout(player0Container);
     northLayout->addWidget(player0Container);
@@ -294,9 +294,10 @@ Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
 
     QHBoxLayout *southLayout = new QHBoxLayout(southPlayerPanel); // Orizzontale in basso
     southLayout->addWidget(PGAvatar);
+    southLayout->addWidget(mazzoText);
+
     southLayout->addWidget(mazzoScopeIcon);
     southLayout->addWidget(mazzoPreseIcon);
-    southLayout->addWidget(mazzoText);
 
     handLayout = new QHBoxLayout(handContainer);
 
@@ -551,14 +552,14 @@ void Cirulla::executeDeal()
         QString mano;
         for (auto &c : giocatore.hand)
             mano += QString::number(c.id) + " ";
-        fprintf(stderr, "DEBUG: Mano Giocatore %d: %s\n", indiceGiocatore, mano.toStdString().c_str());
-        fflush(stderr);
+        // fprintf(stderr, "DEBUG: Mano Giocatore %d: %s\n", indiceGiocatore, mano.toStdString().c_str());
+        // fflush(stderr);
     }
 
     showHands();
     showTable();
-    fprintf(stderr, "controllo che il mazziere non faccia punto");
-    fflush(stderr);
+    // fprintf(stderr, "controllo che il mazziere non faccia punto");
+    // fflush(stderr);
     dealersChance();
     processTurn();
 }
