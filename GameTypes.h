@@ -36,6 +36,13 @@ enum class Seme
     Fiori
 };
 
+enum class Mood
+{
+    Normal,
+    Annoyed,
+    Happy
+};
+
 enum GamePhase
 {
     STATE_SELECTING_DEALER,
@@ -61,7 +68,7 @@ struct ProfileData
 
     bool isHuman = false;
 
-    // Statistiche persistenti
+        // Statistiche persistenti
     int playedMatches = 0;
     int wonMatches = 0;
 
@@ -125,6 +132,7 @@ struct PlayerState
 {
     int id;
     QString name;
+    Mood mood = Mood::Normal;
     SeatType type = SeatType::Empty;
 
     QVector<Carta> hand;

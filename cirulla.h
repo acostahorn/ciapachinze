@@ -46,6 +46,7 @@ private:
 
     QLabel *mazzoPreseIconArr[4];
     QLabel *avatarArr[4];
+    QWidget *playerPanels[4];
 
     QLabel *mazzoScopeIconArr[4];
     QLabel *mazzoTextArr[4];
@@ -158,14 +159,17 @@ private:
     void setupGame(const QVector<ProfileData> &players, bool giocoACoppie);
     QVector<ProfileData> getPlayers(QString p);
     void initialDeal();
-    ;
+
     void executeDeal();
-    void dealNextRound();
+    void dealNextRound(std::function<void()> onComplete);
     void showTable();
     void renderHandToLayout(const PlayerState &p, QLayout *targetLayout);
+    void renderCardToLayout(int playerIndex, int cardIndex, QLayout *targetLayout);
+
     void showHands();
+    void showHandsAfterDeal(std::function<void()> onComplete);
+
     int selectDealer();
-    int getLocalSeat(int player_id, int human_seat_index, int total_players);
     int cardValue(const Carta &carta);
     void dealersChance();
     bool all_cards_same(const QVector<Carta> &carte);
@@ -210,6 +214,9 @@ private:
     Carta trovaCartaMigliorePerSeme(const QVector<Carta> &carteSeme);
     void calcolaPunti(int tipoStat);
     QString cartaSemeToString(Seme seme);
+
+    void changeExpression(QString mood, int playerIndex);
+    void setAvatarHighlighted(int playerIndex, bool highlighted);
 
     void continueGame();
 
