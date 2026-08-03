@@ -4,18 +4,22 @@
 #include <QApplication>
 #include <QLocale>
 #include <QTranslator>
+#if defined(Q_OS_WIN)
 #include <shobjidl.h>
+#endif
 
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
+#if defined(Q_OS_WIN)
+#include <shobjidl.h>
+    // ... e nel punto in cui richiami la funzione:
     SetCurrentProcessExplicitAppUserModelID(L"Genova.Cirulla.Game");
-
+#endif
 
     a.setStyleSheet("QPushButton { border: 1px solid #8f8f91; border-radius: 4px; background-color: #f0f0f0; padding: 5px}"
-        "QComboBox { border: 1px solid #8f8f91; border-radius: 4px; background-color: #f0f0f0; padding: 5px; }");
-
-    CharacterManager::loadFromDisk();
+                    "QComboBox { border: 1px solid #8f8f91; border-radius: 4px; background-color: #f0f0f0; padding: 5px; }");
+    c CharacterManager::loadFromDisk();
 
     QTranslator translator;
     const QStringList uiLanguages = QLocale::system().uiLanguages();
