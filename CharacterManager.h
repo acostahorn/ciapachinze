@@ -3,6 +3,8 @@
 
 #include <QVector>
 #include <QString>
+#include <QJsonArray>
+
 #include "GameTypes.h"
 
 // Definiamo qui la struttura, così è accessibile ovunque includa questo header
@@ -39,7 +41,8 @@ public:
 
 private:
     static QVector<ProfileData> m_registeredPlayers;
-    
+    static QJsonArray serializeRankedMoves(const std::vector<RankedSituation> &rankedMoves);
+    static std::vector<RankedSituation> deserializeRankedMoves(const QJsonArray &array);
 };
 
 #endif // CHARACTERMANAGER_H

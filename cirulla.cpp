@@ -24,6 +24,7 @@
 #include <QPainterPath>
 #include <QInputDialog>
 #include <QPushButton>
+#include <string>
 
 Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
 {
@@ -493,6 +494,7 @@ void Cirulla::mainScreen()
     for (int i = 0; i < state.seats.size(); ++i)
     {
         ++config.players[i].playedMatches;
+        fprintf(stderr, "salvando stats giocatore %d\n", i);
         CharacterManager::updatePlayerStats(config.players[i]);
     }
     updateOverlay("", "", false);
@@ -585,6 +587,7 @@ void Cirulla::setupGame(const QVector<ProfileData> &players, bool giocoACoppie)
 
     state.seats.clear();
     config.players.clear();
+    state.playedCards.clear();
 
     state.phase = MatchPhase::Playing;
     config.mode = GameMode::Offline;
@@ -597,6 +600,7 @@ void Cirulla::setupGame(const QVector<ProfileData> &players, bool giocoACoppie)
         PlayerState p;
         p.id = i;
         p.totaleScope = 0;
+        config.players[i].moves.clear(); // Inizializza lo storico delle mosse per ogni giocatore
         QString avatarPath = config.players[i].avatarPath;
         QPixmap cardImage(avatarPath);
 
@@ -1083,7 +1087,7 @@ void Cirulla::showHands()
 void Cirulla::showHandsAfterDeal(std::function<void()> onComplete)
 {
     int firstPlayerIndex = (state.dealerIndex + 1) % 4;
-    int stepDelay = 200;
+    int stepDelay = waitTime/5;
     int totalCards = 3 * 4;
     int globalCounter = 0;
 
@@ -1114,7 +1118,7 @@ void Cirulla::showHandsAfterDeal(std::function<void()> onComplete)
         }
     }
 
-    int totalAnimationDuration = totalCards * stepDelay + 500;
+    int totalAnimationDuration = totalCards * stepDelay + waitTime/2;
 
     // Quando l'animazione finisce, eseguiamo la funzione passata come parametro (se esiste)
     QTimer::singleShot(totalAnimationDuration, this, [onComplete]()
@@ -1324,7 +1328,7 @@ void Cirulla::playCard(int handIndex, QList<int> &tableIndices)
                 player.carteScoperte = false;
 
             // Chiamiamo dealNextRound passando il blocco da eseguire a fine animazione
-            QTimer::singleShot(500, this, [this]
+            QTimer::singleShot(waitTime/2, this, [this]
                                {   dealNextRound([this]()
                           {
                               state.currentTurnIndex = (state.dealerIndex + 1) % state.seats.size();
@@ -1363,7 +1367,7 @@ void Cirulla::playCard(int handIndex, QList<int> &tableIndices)
                 }
             }
 
-            QTimer::singleShot(1500, this, [this, lastOneId]()
+            QTimer::singleShot(waitTime * 1.5, this, [this, lastOneId]()
                                {
     // 1. Dopo 1 secondo: svuota il tavolo e aggiorna la grafica
     if (this->state.phase != MatchPhase::Playing) return;
@@ -1374,7 +1378,7 @@ void Cirulla::playCard(int handIndex, QList<int> &tableIndices)
     this->showTable();
 
     // 2. Fai partire il secondo timer solo ORA, per altri 1000ms (totale 2s)
-    QTimer::singleShot(1500, this, [this]()
+    QTimer::singleShot(waitTime * 1.5, this, [this]()
     {
         if (this->state.phase != MatchPhase::Playing) return;
         
@@ -1401,6 +1405,7 @@ void Cirulla::makeMove(int handIndex, QList<int> &tableIndices)
 {
     PlayerState &giocatore = state.seats[state.currentTurnIndex];
     Carta giocata = giocatore.hand[handIndex];
+    state.playedCards.append(giocata);
 
     if (tableIndices.isEmpty())
     {
@@ -1411,6 +1416,11 @@ void Cirulla::makeMove(int handIndex, QList<int> &tableIndices)
     {
         // CASO PRESA O SCOPA
         lastPlayerToScore = state.currentTurnIndex;
+        for (int idx = 0; idx < tableIndices.length(); idx++)
+        {
+            state.playedCards.append(state.tableCards[tableIndices[idx]]);
+        }
+
         std::sort(tableIndices.begin(), tableIndices.end(), std::greater<int>());
         bool isScopa = (state.tableCards.size() == tableIndices.size());
 
@@ -1468,6 +1478,22 @@ void Cirulla::makeMove(int handIndex, QList<int> &tableIndices)
         }
     }
 
+    // sorts the played cards vector removing duplicates
+    std::sort(state.playedCards.begin(), state.playedCards.end(), [](const Carta &a, const Carta &b)
+              {
+            {return a.id < b.id;} });
+    auto last = std::unique(state.playedCards.begin(), state.playedCards.end(), [](const Carta &a, const Carta &b)
+                            { return a.id == b.id; });
+    state.playedCards.erase(last, state.playedCards.end());
+
+    // fprintf(stderr, "Played cards: ");
+    // for (int i = 0; i < state.playedCards.length(); ++i)
+    // {
+    //     fprintf(stderr, "%d-", state.playedCards[i].id);
+    // }
+    // fprintf(stderr, "Size: %d\n", state.playedCards.size());
+    // fflush(stderr);
+
     // Rimuovi la carta dalla mano del giocatore
     giocatore.hand.removeAt(handIndex);
 }
@@ -1522,6 +1548,32 @@ void Cirulla::botPlay()
         auto bestMossa = std::max_element(mosseValide.begin(), mosseValide.end(),
                                           [](const Mossa &a, const Mossa &b)
                                           { return a.ranking < b.ranking; });
+
+        Situation currentSit;
+        Carta playedCard = bot.hand[bestMossa->handIndex];
+        currentSit.played = playedCard;
+        currentSit.taken = {};
+        for (int idx : bestMossa->tableIndices)
+        {
+            currentSit.taken.append(state.tableCards[idx]);
+        }
+
+        currentSit.hand = state.seats[state.currentTurnIndex].hand;
+        currentSit.table = state.tableCards;
+        currentSit.alreadyPlayed = state.playedCards;
+        currentSit.normalize();
+
+        // Uniamo intestazione e toString() in un'unica stringa pulita
+        // QString logMsg = QString("Bot %1-%2 mano %3, situazione:\n%4\n")
+        //                      .arg(state.currentTurnIndex + 1)
+        //                      .arg(config.players[state.currentTurnIndex].name)
+        //                      .arg(state.hand)
+        //                      .arg(currentSit.toString());
+
+        // fprintf(stderr, "%s", logMsg.toLocal8Bit().constData());
+        // fflush(stderr);
+
+        config.players[state.currentTurnIndex].moves.push_back(currentSit);
         executeBotMove(*bestMossa);
     }
 }
@@ -1894,7 +1946,7 @@ void Cirulla::dealNextRound(std::function<void()> onComplete)
         for (int p = 0; p < 4; ++p) // Per ciascun giocatore in senso circolare
         {
             int currentPlayerIndex = (firstPlayerIndex + p) % 4;
-            int delay = globalCounter * stepDelay;
+            int delay = botGame == true ? 0 : globalCounter * stepDelay;
             globalCounter++;
 
             // Scheduliamo l'aggiunta logica e visiva della singola carta
@@ -1926,7 +1978,7 @@ void Cirulla::dealNextRound(std::function<void()> onComplete)
         }
     }
     // 3. Calcoliamo la durata totale dell'animazione + i 500ms di respiro
-    int totalAnimationDuration = (totalCards * stepDelay) + 500;
+    int totalAnimationDuration = (totalCards * stepDelay) + waitTime / 2;
 
     // 4. Quando l'intera smazzata visiva è completata, sblocchiamo il gioco successivo
     QTimer::singleShot(totalAnimationDuration, this, [onComplete]()
@@ -2140,6 +2192,57 @@ void Cirulla::handleEndOfGame()
         }
     }
 
+    // Logica di fine mano - attribuzione valore alle mosse
+
+    std::vector<int> partialRank = {0, 1, 2, 3};
+    std::sort(partialRank.begin(), partialRank.end(), [this](int i, int j)
+              { return state.seats[i].puntiMano[state.hand] > state.seats[j].puntiMano[state.hand]; });
+    fprintf(stderr, "\nvettore classifica parziale: ");
+    for (int i = 0; i < 4; ++i)
+    {
+        fprintf(stderr, "%d ", partialRank[i]);
+    }
+    fprintf(stderr, "\n");
+    fflush(stderr);
+    for (int pos = 0; pos < 4; ++pos)
+    {
+        int playerIdx = partialRank[pos]; // L'ID del giocatore in questa posizione
+        int reward = 10 - (5 * pos);      // pos 0 -> 10, pos 1 -> 5, pos 2 -> 0, pos 3 -> -5
+
+        for (auto &situation : config.players[playerIdx].moves)
+        {
+            bool found = false;
+            for (auto &rankedSituation : config.players[playerIdx].rankedMoves)
+            {
+                // Controllo equivalenza: move + played (come avevi pensato)
+                if (situation == rankedSituation.situation)
+                {
+                    fprintf(stderr, "----------------FOUND IN ARCHIVE<------------------------");
+                    fflush(stderr);
+
+                    rankedSituation.rank += reward;
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found)
+            {
+                RankedSituation newRankedSituation;
+                newRankedSituation.situation = situation;
+                newRankedSituation.rank = reward;
+                config.players[playerIdx].rankedMoves.push_back(newRankedSituation);
+            }
+        }
+    }
+
+    QString logMsg = config.players[1].rankedMovesToString();
+
+    fprintf(stderr, "%s", logMsg.toLocal8Bit().constData());
+
+    fprintf(stderr, "DIMENSIONI VETTORE SITUATIONS GIOCATORE 1: %lu\n", config.players[1].rankedMoves.size());
+    fflush(stderr);
+
     if (config.giocoACoppie)
     {
         if (state.seats[0].puntiMano[state.hand] > state.seats[1].puntiMano[state.hand])
@@ -2292,7 +2395,9 @@ void Cirulla::continueGame()
         mazzoScopeIconArr[i]->clear();
         mazzoPreseIconArr[i]->clear();
         state.seats[i].carteScoperte = false;
+        config.players[i].moves.clear();
     }
+    state.playedCards.clear();
 
     stackedWidget->setCurrentIndex(1);
     showTable();
@@ -2468,7 +2573,7 @@ void Cirulla::aggiornaStats(int playerIndex)
 void Cirulla::setAvatarHighlighted(int playerIndex, bool highlighted)
 {
 
-     QString borderStyle = "border: 2px solid gold; border-radius: 12px;";
+    QString borderStyle = "border: 2px solid gold; border-radius: 12px;";
     QString neutralStyle = "border: 1px solid #34495e; "
                            "   border-radius: 12px; ";
 
@@ -2811,7 +2916,7 @@ void Cirulla::onGlobalOverlayClicked()
         // Sostituisci la vecchia chiamata al timer del bot con questa:
         if (state.seats[state.currentTurnIndex].type == SeatType::Bot)
         {
-            QTimer::singleShot(1000, this, [this]()
+            QTimer::singleShot(waitTime, this, [this]()
                                {
         if (state.phase == MatchPhase::Playing) {
             this->processTurn();

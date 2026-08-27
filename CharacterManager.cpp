@@ -9,6 +9,7 @@
 #include <QDir>
 #include <QStandardPaths>
 #include <random>
+#include <QJsonObject>
 
 // --- QUESTA RIGA DEVE ESSERE QUI (fuori dalle funzioni) ---
 QVector<ProfileData> CharacterManager::m_registeredPlayers = {
@@ -135,6 +136,8 @@ void CharacterManager::saveToDisk()
         playerObj["isHuman"] = p.isHuman;
         playerObj["playedMatches"] = p.playedMatches;
         playerObj["wonMatches"] = p.wonMatches;
+        playerObj["rankedMoves"] = serializeRankedMoves(p.rankedMoves);
+
         playersArray.append(playerObj);
     }
     QJsonDocument doc(playersArray);
@@ -174,6 +177,7 @@ void CharacterManager::loadFromDisk()
         p.isHuman = obj["isHuman"].toBool();
         p.playedMatches = obj["playedMatches"].toInt();
         p.wonMatches = obj["wonMatches"].toInt();
+        p.rankedMoves = deserializeRankedMoves(obj["rankedMoves"].toArray());
 
         m_registeredPlayers.append(p);
     }
@@ -212,4 +216,86 @@ void CharacterManager::ensureBotsExist()
     }
     // Una volta aggiunti, salviamo lo stato iniziale su disco
     saveToDisk();
+}
+
+QJsonArray CharacterManager::serializeRankedMoves(const std::vector<RankedSituation> &rankedMoves)
+{
+    QJsonArray rankedMovesArray;
+    for (const auto &rm : rankedMoves)
+    {
+        QJsonObject rmObj;
+        rmObj["rank"] = rm.rank;
+
+        QJsonObject sitObj;
+
+        sitObj["played"] = rm.situation.played.id;
+        auto serializeCards = [](const QVector<Carta> &cards)
+        {
+            QJsonArray array;
+            for (const auto &c : cards)
+            {
+                array.append(c.id);
+            }
+            return array;
+        };
+        sitObj["taken"] = serializeCards(rm.situation.taken);
+        sitObj["hand"] = serializeCards(rm.situation.hand);
+        sitObj["table"] = serializeCards(rm.situation.table);
+        sitObj["alreadyPlayed"] = serializeCards(rm.situation.alreadyPlayed);
+
+        rmObj["situation"] = sitObj;
+        rankedMovesArray.append(rmObj);
+    }
+    return rankedMovesArray;
+}
+
+std::vector<RankedSituation> CharacterManager::deserializeRankedMoves(const QJsonArray &array)
+{
+    std::vector<RankedSituation> rankedMoves;
+
+    for (auto val : array)
+    {
+        QJsonObject rmObj = val.toObject();
+        RankedSituation rm;
+        rm.rank = rmObj["rank"].toInt();
+
+        QJsonObject sitObj = rmObj["situation"].toObject();
+
+        // Helper lambda per leggere un array di ID e trasformarlo in QVector<Carta>
+        auto deserializeCards = [](const QJsonValue &jsonVal)
+        {
+            QVector<Carta> cards;
+            QJsonArray arr = jsonVal.toArray();
+            for (auto cVal : arr)
+            {
+                int cardId = cVal.toInt();
+                Carta c;
+                c.id = cardId;
+                c.seme = static_cast<Seme>(cardId / 10); // Assuming seme is determined by ID
+                c.faceValue = (cardId % 10) + 1;         // Assuming face
+
+                cards.append(c);
+            }
+            return cards;
+        };
+
+        // 1. Carta giocata
+        int playedId = sitObj["played"].toInt();
+        rm.situation.played.id = playedId;
+        rm.situation.played.seme = static_cast<Seme>(playedId / 10);
+        rm.situation.played.faceValue = (playedId % 10) + 1;
+
+        // 2. Vettori di carte
+        rm.situation.taken = deserializeCards(sitObj["taken"]);
+        rm.situation.hand = deserializeCards(sitObj["hand"]);
+        rm.situation.table = deserializeCards(sitObj["table"]);
+        rm.situation.alreadyPlayed = deserializeCards(sitObj["alreadyPlayed"]);
+
+        // Per sicurezza, normalizziamo anche quando carichiamo
+        rm.situation.normalize();
+
+        rankedMoves.push_back(rm);
+    }
+
+    return rankedMoves;
 }

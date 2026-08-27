@@ -36,6 +36,22 @@ enum class Seme
     Fiori
 };
 
+inline QString semeToString(Seme s)
+{
+    switch (s)
+    {
+    case Seme::Picche:
+        return "Picche";
+    case Seme::Cuori:
+        return "Cuori";
+    case Seme::Denari:
+        return "Denari";
+    case Seme::Fiori:
+        return "Fiori";
+    }
+    return "Unknown";
+}
+
 enum class Mood
 {
     Normal,
@@ -61,6 +77,92 @@ enum FaseBottone
 
 // --- Core Structural Objects ---
 
+struct Carta
+{
+    int id; // Unique ID (0 to 39)
+    Seme seme;
+    int faceValue; // 1 to 10
+
+    bool isMatta() const
+    {
+        return (faceValue == 7 && seme == Seme::Cuori); // 7 of Cups custom rule
+    }
+    QString toString() const
+    {
+        return QString("<ID: %1: %3 di %2>").arg(id).arg(semeToString(seme)).arg(faceValue);
+    }
+    bool operator==(const Carta &other) const
+    {
+        return id == other.id;
+    }
+};
+
+struct Mossa
+{
+    int handIndex;
+    QList<int> tableIndices;
+    int ranking;
+    bool operator==(const Mossa &other) const
+    {
+        return handIndex == other.handIndex && tableIndices == other.tableIndices;
+    }
+};
+
+struct Situation
+{
+    Carta played;
+    QVector<Carta> taken;
+    QVector<Carta> hand;
+    QVector<Carta> table;
+    QVector<Carta> alreadyPlayed;
+    void normalize()
+    {
+        std::sort(hand.begin(), hand.end(), [](const Carta &a, const Carta &b)
+                  { return a.id < b.id; });
+        std::sort(table.begin(), table.end(), [](const Carta &a, const Carta &b)
+                  { return a.id < b.id; });
+    }
+    QString toString() const
+    {
+        QString result = "Move: played card=" + played.toString() + ", taken cards=[";
+        for (int i = 0; i < taken.size(); ++i)
+        {
+            result += taken[i].toString();
+            if (i < taken.size() - 1)
+                result += ", ";
+        }
+        result += "]\n| Hand: ";
+        for (const auto &c : hand)
+        {
+            result += c.toString() + " ";
+        }
+        result += "\n| Table: ";
+        for (const auto &c : table)
+        {
+            result += c.toString() + " ";
+        }
+        result += "\n| Played: ";
+        for (const auto &c : alreadyPlayed)
+        {
+            result += c.toString() + " ";
+        }
+        return result;
+    }
+    bool operator==(const Situation &other) const
+    {
+        return played.id == other.played.id &&
+               table == other.table &&
+               taken == other.taken;
+    }
+};
+
+struct RankedSituation
+{
+
+    Situation situation;
+    int rank;
+};
+
 struct ProfileData
 {
     QString name;
@@ -68,7 +170,7 @@ struct ProfileData
 
     bool isHuman = false;
 
-        // Statistiche persistenti
+    // Statistiche persistenti
     int playedMatches = 0;
     int wonMatches = 0;
 
@@ -86,25 +188,18 @@ struct ProfileData
 
         return (static_cast<double>(wonMatches) + 2.5) / (playedMatches + 10) * 100.0;
     }
-};
+    std::vector<Situation> moves;             // Elenco delle mosse effettuate dal giocatore durante la singola partita, utile per l'analisi delle strategie, il confronto con lo storico delle mosse e per il miglioramento dell'IA.
+    std::vector<RankedSituation> rankedMoves; // Storico delle mosse con ranking, utile per l'analisi delle strategie e per il miglioramento dell'IA.
 
-struct Carta
-{
-    int id; // Unique ID (0 to 39)
-    Seme seme;
-    int faceValue; // 1 to 10
-
-    bool isMatta() const
+    QString rankedMovesToString() const
     {
-        return (faceValue == 7 && seme == Seme::Cuori); // 7 of Cups custom rule
-    }
-};
-
-struct Mossa
-{
-    int handIndex;
-    QList<int> tableIndices;
-    int ranking;
+        QString result;
+        for (const auto &rankedSituation : rankedMoves)
+        {
+            result += QString("Situation: %1\nRank: %2\n___________________________________________\n").arg(rankedSituation.situation.toString()).arg(rankedSituation.rank);
+        }
+        return result;
+    };
 };
 
 struct Score
@@ -158,6 +253,7 @@ struct GameState
 {
     QVector<Carta> deck;
     QVector<Carta> tableCards;
+    QVector<Carta> playedCards;
     int currentTurnIndex = 0;
     int dealerIndex = 0;
     int deckIndex = 0;
