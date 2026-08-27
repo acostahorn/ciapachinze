@@ -142,7 +142,7 @@ private:
     // *******TEST SWITCH********
 
     bool isTestMode = false;
-    bool botGame = true;
+    bool botGame = false;
     int waitTime = botGame == true ? 0 : 1000;
 
     GamePhase currentGamePhase;
