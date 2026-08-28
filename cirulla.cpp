@@ -1087,7 +1087,7 @@ void Cirulla::showHands()
 void Cirulla::showHandsAfterDeal(std::function<void()> onComplete)
 {
     int firstPlayerIndex = (state.dealerIndex + 1) % 4;
-    int stepDelay = waitTime/5;
+    int stepDelay = waitTime / 5;
     int totalCards = 3 * 4;
     int globalCounter = 0;
 
@@ -1096,7 +1096,7 @@ void Cirulla::showHandsAfterDeal(std::function<void()> onComplete)
         for (int j = 0; j < 4; ++j)
         {
             int currentPlayerIndex = (firstPlayerIndex + j) % 4;
-            int delay = globalCounter * stepDelay;
+            int delay = botGame == true ? 0 : globalCounter * stepDelay;
             globalCounter++;
 
             QTimer::singleShot(delay, this, [this, currentPlayerIndex, i]()
@@ -1118,7 +1118,7 @@ void Cirulla::showHandsAfterDeal(std::function<void()> onComplete)
         }
     }
 
-    int totalAnimationDuration = totalCards * stepDelay + waitTime/2;
+    int totalAnimationDuration = botGame == true ? 0 : totalCards * stepDelay + waitTime / 2;
 
     // Quando l'animazione finisce, eseguiamo la funzione passata come parametro (se esiste)
     QTimer::singleShot(totalAnimationDuration, this, [onComplete]()
@@ -1328,7 +1328,7 @@ void Cirulla::playCard(int handIndex, QList<int> &tableIndices)
                 player.carteScoperte = false;
 
             // Chiamiamo dealNextRound passando il blocco da eseguire a fine animazione
-            QTimer::singleShot(waitTime/2, this, [this]
+            QTimer::singleShot(waitTime / 2, this, [this]
                                {   dealNextRound([this]()
                           {
                               state.currentTurnIndex = (state.dealerIndex + 1) % state.seats.size();
@@ -1845,6 +1845,27 @@ int Cirulla::calcolaValoreTattico(const Mossa &m)
             rank += 25;
     }
 
+    Situation potentialSituation;
+    potentialSituation.played = state.seats[state.currentTurnIndex].hand[m.handIndex];
+
+    for (auto i : m.tableIndices)
+    {
+        potentialSituation.taken.append(state.tableCards[i]);
+    }
+    potentialSituation.hand = state.seats[state.currentTurnIndex].hand;
+    potentialSituation.table = state.tableCards;
+    potentialSituation.alreadyPlayed = state.playedCards;
+    potentialSituation.normalize();
+
+    for (const auto &rankedSit : config.players[state.currentTurnIndex].rankedMoves)
+    {
+        if (potentialSituation == rankedSit.situation)
+        {
+            rank += rankedSit.rank;
+            break;
+        }
+    }
+
     return rank;
 }
 
@@ -1978,7 +1999,7 @@ void Cirulla::dealNextRound(std::function<void()> onComplete)
         }
     }
     // 3. Calcoliamo la durata totale dell'animazione + i 500ms di respiro
-    int totalAnimationDuration = (totalCards * stepDelay) + waitTime / 2;
+    int totalAnimationDuration = botGame == true ? 0 : (totalCards * stepDelay) + waitTime / 2;
 
     // 4. Quando l'intera smazzata visiva è completata, sblocchiamo il gioco successivo
     QTimer::singleShot(totalAnimationDuration, this, [onComplete]()
@@ -2207,7 +2228,16 @@ void Cirulla::handleEndOfGame()
     for (int pos = 0; pos < 4; ++pos)
     {
         int playerIdx = partialRank[pos]; // L'ID del giocatore in questa posizione
-        int reward = 10 - (5 * pos);      // pos 0 -> 10, pos 1 -> 5, pos 2 -> 0, pos 3 -> -5
+        int playerScore = state.seats[playerIdx].puntiMano[state.hand];
+        int winnerScore = state.seats[partialRank[0]].puntiMano[state.hand];
+
+        int baseRewardByPosition[4] = {10, 5, 0, -10};
+
+        int gap = playerScore - winnerScore; // negative when the player is behind
+        int gapModifier = std::clamp(gap / 20, -2, 2);
+
+        int reward = baseRewardByPosition[pos] + gapModifier;
+        reward = std::clamp(reward, -15, 15);
 
         for (auto &situation : config.players[playerIdx].moves)
         {
@@ -2217,7 +2247,7 @@ void Cirulla::handleEndOfGame()
                 // Controllo equivalenza: move + played (come avevi pensato)
                 if (situation == rankedSituation.situation)
                 {
-                    fprintf(stderr, "----------------FOUND IN ARCHIVE<------------------------");
+                    fprintf(stderr, "---------------->FOUND IN ARCHIVE<---------------------\n");
                     fflush(stderr);
 
                     rankedSituation.rank += reward;

@@ -17,6 +17,9 @@ int main(int argc, char *argv[])
     SetCurrentProcessExplicitAppUserModelID(L"Genova.Cirulla.Game");
 #endif
 
+    QCoreApplication::setOrganizationName("Genova");
+    QCoreApplication::setApplicationName("cirulla");
+
     a.setStyleSheet("QPushButton { border: 1px solid #8f8f91; border-radius: 4px; background-color: #f0f0f0; padding: 5px}"
                     "QComboBox { border: 1px solid #8f8f91; border-radius: 4px; background-color: #f0f0f0; padding: 5px; }");
 

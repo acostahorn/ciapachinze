@@ -41,13 +41,13 @@ inline QString semeToString(Seme s)
     switch (s)
     {
     case Seme::Picche:
-        return "Picche";
+        return "S";
     case Seme::Cuori:
-        return "Cuori";
+        return "H";
     case Seme::Denari:
-        return "Denari";
+        return "D";
     case Seme::Fiori:
-        return "Fiori";
+        return "C";
     }
     return "Unknown";
 }
@@ -79,9 +79,9 @@ enum FaseBottone
 
 struct Carta
 {
-    int id; // Unique ID (0 to 39)
-    Seme seme;
-    int faceValue; // 1 to 10
+    int id = -1; // Unique ID (0 to 39), -1 means unset/empty
+    Seme seme = Seme::Picche;
+    int faceValue = 0; // 1 to 10, 0 means unset/empty
 
     bool isMatta() const
     {
@@ -89,7 +89,7 @@ struct Carta
     }
     QString toString() const
     {
-        return QString("<ID: %1: %3 di %2>").arg(id).arg(semeToString(seme)).arg(faceValue);
+        return QString("<%1>").arg(id);
     }
     bool operator==(const Carta &other) const
     {
@@ -115,6 +115,14 @@ struct Situation
     QVector<Carta> hand;
     QVector<Carta> table;
     QVector<Carta> alreadyPlayed;
+
+    bool isEmpty() const
+    {
+        return played.id == -1 && played.faceValue == 0 &&
+               taken.isEmpty() && hand.isEmpty() &&
+               table.isEmpty() && alreadyPlayed.isEmpty();
+    }
+
     void normalize()
     {
         std::sort(hand.begin(), hand.end(), [](const Carta &a, const Carta &b)
@@ -150,9 +158,19 @@ struct Situation
     }
     bool operator==(const Situation &other) const
     {
+        int limit = 10;
+        auto recentThis = alreadyPlayed.size() <= limit
+                              ? alreadyPlayed
+                              : alreadyPlayed.mid(alreadyPlayed.size() - limit);
+
+        auto recentOther = other.alreadyPlayed.size() <= limit
+                               ? other.alreadyPlayed
+                               : other.alreadyPlayed.mid(other.alreadyPlayed.size() - limit);
+
         return played.id == other.played.id &&
                table == other.table &&
-               taken == other.taken;
+               taken == other.taken &&
+               recentThis == recentOther;
     }
 };
 

@@ -186,7 +186,9 @@ void CharacterManager::loadFromDisk()
 
 QString CharacterManager::getSaveFilePath()
 {
-    QString dataLocation = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    // Use a fixed, simple path under the user's home so we don't depend
+    // on organization/application names (avoid creating a 'Genova' folder).
+    QString dataLocation = QDir::homePath() + "/.local/share/cirulla";
 
     QDir dir(dataLocation);
     if (!dir.exists())
@@ -194,7 +196,9 @@ QString CharacterManager::getSaveFilePath()
         dir.mkpath(".");
     }
 
-    return dataLocation + "/players.json";
+    QString filePath = dataLocation + "/players.json";
+    fprintf(stderr, "DEBUG: CharacterManager save/load (fixed) path: %s\n", qPrintable(filePath));
+    return filePath;
 }
 
 void CharacterManager::ensureBotsExist()
@@ -223,6 +227,11 @@ QJsonArray CharacterManager::serializeRankedMoves(const std::vector<RankedSituat
     QJsonArray rankedMovesArray;
     for (const auto &rm : rankedMoves)
     {
+        if (rm.situation.isEmpty())
+        {
+            continue;
+        }
+
         QJsonObject rmObj;
         rmObj["rank"] = rm.rank;
 
@@ -279,8 +288,13 @@ std::vector<RankedSituation> CharacterManager::deserializeRankedMoves(const QJso
             return cards;
         };
 
-        // 1. Carta giocata
         int playedId = sitObj["played"].toInt();
+        if (playedId == -1)
+        {
+            continue;
+        }
+
+        // 1. Carta giocata
         rm.situation.played.id = playedId;
         rm.situation.played.seme = static_cast<Seme>(playedId / 10);
         rm.situation.played.faceValue = (playedId % 10) + 1;
@@ -294,7 +308,10 @@ std::vector<RankedSituation> CharacterManager::deserializeRankedMoves(const QJso
         // Per sicurezza, normalizziamo anche quando carichiamo
         rm.situation.normalize();
 
-        rankedMoves.push_back(rm);
+        if (!rm.situation.isEmpty())
+        {
+            rankedMoves.push_back(rm);
+        }
     }
 
     return rankedMoves;
