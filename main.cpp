@@ -1,5 +1,6 @@
 #include "cirulla.h"
 #include "CharacterManager.h"
+#include "HeadlessRunner.h"
 
 #include <QApplication>
 #include <QLocale>
@@ -11,11 +12,34 @@
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
+    QStringList arguments = a.arguments();
+
 #if defined(Q_OS_WIN)
-#include <shobjidl.h>
     // ... e nel punto in cui richiami la funzione:
     SetCurrentProcessExplicitAppUserModelID(L"Genova.Cirulla.Game");
 #endif
+    if (arguments.contains("--headless"))
+    {
+        fprintf(stderr, ">>> [DEBUG] Trovato --headless nel main! Entro nel blocco.\n");
+        fflush(stderr);
+
+        CharacterManager::loadFromDisk();
+
+        bool giocoACoppie = arguments.contains("--giocoACoppie");
+        int numGames = 1; // Default
+        for (int i = 0; i < arguments.size(); ++i)
+        {
+            if (arguments[i] == "--numGames" && i + 1 < arguments.size())
+            {
+                numGames = arguments[i + 1].toInt();
+                break;
+            }
+        }
+
+        HeadlessRunner runner;
+        runner.runBatch(numGames, giocoACoppie);
+        return 0; // Termina l'applicazione dopo l'esecuzione batch
+    }
 
     QCoreApplication::setOrganizationName("Genova");
     QCoreApplication::setApplicationName("cirulla");

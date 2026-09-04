@@ -28,6 +28,8 @@ add_executable(cirulla
     hallOfFameDialog.cpp
     RegoleDialog.h
     RegoleDialog.cpp
+    HeadlessRunner.h
+    HeadlessRunner.cpp
     )
 
 target_link_libraries(cirulla PRIVATE

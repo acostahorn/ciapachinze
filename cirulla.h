@@ -17,12 +17,17 @@
 
 class HomeScreen;
 
+class HeadlessRunner;
+
 class Cirulla : public QWidget
 {
     Q_OBJECT
+    friend class HeadlessRunner; // Permette a HeadlessRunner di accedere ai membri privati di Cirulla
 
 public:
-    explicit Cirulla(QWidget *parent = nullptr);
+    explicit Cirulla(QWidget *parent = nullptr, bool headlessMode = false);
+    void setTestGameMode(bool enabled) { testGameMode = enabled; }
+
     ~Cirulla();
 
 protected:
@@ -33,6 +38,7 @@ private slots:
 
 private:
     // Engine state wrappers
+
     GameConfig config;
     GameState state;
 
@@ -142,7 +148,9 @@ private:
     // *******TEST SWITCH********
 
     bool isTestMode = false;
-    bool botGame = false; // Set to true to enable bot players for testing
+    bool botGame = false;      // Set to true to enable bot players for testing
+    bool testGameMode = false; // Set to true to enable a test game with predefined moves
+
     int waitTime = botGame == true ? 0 : 1000;
 
     GamePhase currentGamePhase;

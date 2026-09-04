@@ -48,7 +48,6 @@ QVector<ProfileData> CharacterManager::getPlayers(const QString humanPlayerName)
         }
     }
 
-    // Se l'umano non esiste nel database, crealo al volo
     if (!humanFound)
     {
         humanPlayer = {humanPlayerName.trimmed(), "avatars/default.png", true};

@@ -26,480 +26,495 @@
 #include <QPushButton>
 #include <string>
 
-Cirulla::Cirulla(QWidget *parent) : QWidget(parent)
+Cirulla::Cirulla(QWidget *parent, bool headlessMode) : QWidget(parent), testGameMode(headlessMode)
+
 {
-
-    this->setFixedSize(1400, 1000);
-    stackedWidget = new QStackedWidget(this);
-
-    this->setObjectName("MainWindow"); // Importante per referenziarlo
-
-    this->setStyleSheet(
-        "QWidget#MainWindow { "
-        "   background-color: #000c18; " // Blu notte
-        "} "
-        "* { " // Questo asterisco applica a OGNI widget esistente nella finestra
-        "   background-color: transparent; "
-        "   color: #f2f3f6; "                      // Testo grigio-azzurro
-        "   font-family: 'Segoe UI', sans-serif; " // Font pulito
-        "   font-size: 20; "                       // Font pulito
-        "} "
-        "QLabel#PrimieraText { "
-        "   border: none; "
-        "   background-color: transparent; "
-        "} "
-        "QLabel { "
-        "   font-size: 16px; " // Aumenta da 14 o 15 a 16 o 18
-        "   font-weight: 500; "
-        "} "
-        "QGroupBox { "
-        "   border: 2px solid #3db0d3; "
-        "   border-radius: 10px; "
-        "   margin-top: 10px; "
-        "} "
-        "QGroupBox::title { "
-        "   color: #ffffff; "
-        "   font-weight: bold; "
-        "}");
-
-    // riferimento a homeScreen
-
-    homeScreen = new HomeScreen(this);
-    stackedWidget->addWidget(homeScreen);
-
-    // playerstyle
-    QString playerStyle =
-        "QWidget { "
-
-        "   border: 1px solid #34495e; " // Bordo discreto, non elettrico
-        "   border-radius: 12px; "       // Arrotondamento più morbido
-        "}";
-
-    QString containerStyle =
-        "QWidget { "
-        "background-color: qradialgradient(cx:0.5, cy:0.5, radius:0.8, fx:0.5, fy:0.5, stop:0 #c99ecc, stop:1 #d672ea); "
-        "}";
-
-    // CONTAINERS
-
-    // Top Player (centered)
-    player0Container = new QWidget(this);
-    player0Container->setFixedWidth(800);
-    // player0Container->setStyleSheet(playerStyle);
-    player0Container->setStyleSheet(containerStyle);
-
-    // QHBoxLayout *player0Layout = new QHBoxLayout(player0Container);
-    // player0Layout->setAlignment(Qt::AlignCenter);
-
-    // Side Players
-
-    // Per il Giocatore 1
-    player1Container = new QWidget(this);
-
-    player1Container->setMinimumSize(100, 400);
-    player1Container->setStyleSheet(containerStyle);
-
-    // Per il Giocatore 3
-    player3Container = new QWidget(this);
-    player3Container->setStyleSheet(containerStyle);
-    player3Container->setMinimumSize(100, 400);
-
-    // Apply size policies for all
-    auto setContainerStyle = [](QWidget *container, int width, int height)
+    if (!testGameMode)
     {
-        container->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-        container->setFixedSize(width, height); // Blocca fisicamente le dimensioni
-    };
-
-    setContainerStyle(player0Container, 550, 150);
-
-    // 2. Main Layout (Vertical)
-    mainLayout = new QVBoxLayout(this);
-
-    // 3. Output Area (Separate, full-width row)
-    // outputArea = new QTextEdit(this);
-    // outputArea->setReadOnly(true);
-    // outputArea->setMaximumHeight(10);
-    // outputArea->hide();
-    // mainLayout->addWidget(outputArea);
-
-    infoOverlay = new QFrame(this);
-    infoOverlay->setStyleSheet("font-weight: bold; font-size: 18px;");
-
-    overlayLayout = new QHBoxLayout(infoOverlay);
-    overlayLayout->setContentsMargins(10, 0, 10, 0);
-
-    infoOverlay->setFixedHeight(70);
-
-    infoLabel = new QLabel("CIRULLA", infoOverlay);
-    button = new QPushButton("Inizia il Gioco", infoOverlay);
-
-    overlayLayout->addStretch(1);
-
-    overlayLayout->addWidget(infoLabel);
-
-    overlayLayout->addWidget(button);
-
-    overlayLayout->addStretch(1);
-
-    mainLayout->addWidget(infoOverlay);
-
-    // Game Area
-
-    gameArea = new QWidget(this);
-
-    gameLayout = new QGridLayout(gameArea);
-    gameLayout->setContentsMargins(0, 0, 0, 0); // Nessun margine extra
-
-    gameLayout->setColumnStretch(0, 0); // Fissa larghezza Ovest
-    gameLayout->setColumnStretch(1, 1); // Il Tavolo centrale si espande!
-    gameLayout->setColumnStretch(2, 0); // Fissa larghezza Est
-
-    gameLayout->setRowStretch(0, 0); // Fissa altezza Nord
-    gameLayout->setRowStretch(1, 1); // Il Tavolo centrale si espande!
-    gameLayout->setRowStretch(2, 0); // Fissa altezza Sud
-
-    mazzoPreseP0Icon = new QLabel(this);
-    mazzoScopeP0Icon = new QLabel(this);
-
-    mazzoP0Text = new QLabel("Prese: 0\nScope: 0", this);
-
-    P0Avatar = new QLabel(this);
-    P0Avatar->setFixedSize(100, 130);
-
-    // --- BLOCCO NORD (Giocatore in alto) ---
-    QWidget *northPlayerPanel = new QWidget(this);
-    northPlayerPanel->setStyleSheet(playerStyle);
-    setContainerStyle(northPlayerPanel, 900, 200);
-
-    QHBoxLayout *northLayout = new QHBoxLayout(northPlayerPanel);
-    northLayout->addWidget(P0Avatar);
-    northLayout->addWidget(mazzoP0Text);
-    northLayout->addWidget(mazzoScopeP0Icon);
-    northLayout->addWidget(mazzoPreseP0Icon);
-
-    QHBoxLayout *p0Layout = new QHBoxLayout(player0Container);
-    northLayout->addWidget(player0Container);
-
-    gameLayout->addWidget(northPlayerPanel, 0, 1, Qt::AlignCenter); // Sopra
-
-    mazzoPreseP3Icon = new QLabel(this);
-    mazzoScopeP3Icon = new QLabel(this);
-    mazzoP3Text = new QLabel(this);
-    P3Avatar = new QLabel(this);
-    P3Avatar->setFixedSize(100, 130);
-
-    mazzoPreseP1Icon = new QLabel(this);
-    mazzoScopeP1Icon = new QLabel(this);
-    mazzoP1Text = new QLabel(this);
-    P1Avatar = new QLabel(this);
-    P1Avatar->setFixedSize(100, 130);
-
-    mazzoScopeP1Icon->setFixedHeight(100);
-    mazzoScopeP1Icon->setFixedHeight(100);
-
-    player1Container->setFixedWidth(100); // Scegli una misura che ti piace
-    mazzoScopeP1Icon->setFixedWidth(100);
-    mazzoP1Text->setFixedWidth(100);
-    player3Container->setFixedWidth(100);
-    mazzoScopeP3Icon->setFixedWidth(100);
-    mazzoP3Text->setFixedWidth(100);
-
-    // Forza la policy a Fixed per non permettere espansioni
-    mazzoScopeP1Icon->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-    mazzoScopeP3Icon->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-    player1Container->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-    player3Container->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-
-    // --- BLOCCO OVEST (Giocatore a sinistra) ---
-    QWidget *westPlayerPanel = new QWidget(this);
-    westPlayerPanel->setStyleSheet(playerStyle);
-    setContainerStyle(westPlayerPanel, 240, 420);
-    QHBoxLayout *westLayout = new QHBoxLayout(westPlayerPanel); // In verticale perché sta sul lato
-
-    QWidget *westInfoWidget = new QWidget();
-    QVBoxLayout *westInfoLayout = new QVBoxLayout(westInfoWidget);
-    westInfoLayout->addWidget(P1Avatar);
-    westInfoLayout->addWidget(mazzoP1Text);
-
-    westInfoLayout->addWidget(mazzoScopeP1Icon);
-    westInfoLayout->addWidget(mazzoPreseP1Icon);
-
-    QVBoxLayout *p1Layout = new QVBoxLayout(player1Container);
-    westLayout->addWidget(westInfoWidget);
-
-    westLayout->addWidget(player1Container);
-    gameLayout->addWidget(westPlayerPanel, 1, 0, Qt::AlignCenter); // Sinistra
-
-    // BLOCCO EST -- Giocatore a destra
-
-    QWidget *eastPlayerPanel = new QWidget(this);
-    eastPlayerPanel->setStyleSheet(playerStyle);
-
-    setContainerStyle(eastPlayerPanel, 240, 420);
-
-    QWidget *eastInfoWidget = new QWidget();
-    QVBoxLayout *eastInfoLayout = new QVBoxLayout(eastInfoWidget);
-
-    QHBoxLayout *eastLayout = new QHBoxLayout(eastPlayerPanel);
-
-    eastInfoLayout->addWidget(P3Avatar);
-    eastInfoLayout->addWidget(mazzoP3Text);
-
-    eastInfoLayout->addWidget(mazzoScopeP3Icon);
-    eastInfoLayout->addWidget(mazzoPreseP3Icon);
-
-    QVBoxLayout *p3Layout = new QVBoxLayout(player3Container);
-    eastLayout->addWidget(player3Container);
-    eastLayout->addWidget(eastInfoWidget);
-    gameLayout->addWidget(eastPlayerPanel, 1, 2, Qt::AlignCenter); // Destra
-
-    QGroupBox *tableContainer = new QGroupBox();
-
-    tableContainer->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-    // Forza il widget a ignorare le dimensioni minime calcolate dai figli
-    tableContainer->setFixedHeight(400);
-    tableContainer->setFixedWidth(800);
-    tableContainer->setStyleSheet(
-        "QGroupBox { "
-        "   background-color: qradialgradient(cx:0.5, cy:0.5, radius:0.8, fx:0.5, fy:0.5, stop:0 #27ae60, stop:1 #1e8449); "
-        "   border: 4px solid #144d26; "
-        "   border-radius: 15px; "
-        "   font-weight: bold; color: #ffffff; "
-        "}");
-
-    tableLayout = new QGridLayout(tableContainer);
-    tableLayout->setAlignment(Qt::AlignCenter);
-    tableContainer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    gameLayout->addWidget(tableContainer, 1, 1, Qt::AlignCenter); // Centro
-
-    // Add table to center column and make it stretch
-
-    QWidget *handContainer = new QWidget(this);
-
-    handContainer->setStyleSheet(containerStyle);
-
-    setContainerStyle(handContainer, 550, 150);
-
-    PGAvatar = new QLabel(this);
-    PGAvatar->setFixedSize(100, 130);
-
-    mazzoPreseIcon = new QLabel();
-    mazzoText = new QLabel("Scope: 0\nPrese: 0", this);
-    mazzoScopeIcon = new QLabel();
-
-    // --- BLOCCO SUD (Il tuo giocatore in basso) ---
-    QWidget *southPlayerPanel = new QWidget(this);
-    setContainerStyle(southPlayerPanel, 900, 200);
-    southPlayerPanel->setStyleSheet(playerStyle);
-
-    QHBoxLayout *southLayout = new QHBoxLayout(southPlayerPanel); // Orizzontale in basso
-    southLayout->addWidget(PGAvatar);
-    southLayout->addWidget(mazzoText);
-
-    southLayout->addWidget(mazzoScopeIcon);
-    southLayout->addWidget(mazzoPreseIcon);
-
-    handLayout = new QHBoxLayout(handContainer);
-
-    southLayout->addWidget(handContainer);
-    gameLayout->addWidget(southPlayerPanel, 2, 1, Qt::AlignCenter); // Sotto
-
-    gameLayout->setAlignment(Qt::AlignCenter);
-    mainLayout->setAlignment(Qt::AlignCenter);
-
-    stackedWidget->addWidget(gameArea);
-
-    scoreArea = new QWidget();
-
-    // Il padre ha un layout verticale di base
-
-    mainLayout->addWidget(stackedWidget);
-
-    // Collegamento con array di puntatori
-
-    for (int i = 0; i < 4; ++i)
-    {
-        avatarArr[i] = nullptr; // Fondamentale!
-        playerPanels[i] = nullptr;
-    }
-
-    mazzoPreseIconArr[0] = mazzoPreseP0Icon;
-    mazzoScopeIconArr[0] = mazzoScopeP0Icon;
-    mazzoTextArr[0] = mazzoP0Text;
-    avatarArr[0] = P0Avatar;
-    playerPanels[0] = northPlayerPanel;
-
-    mazzoPreseIconArr[1] = mazzoPreseP1Icon;
-    mazzoScopeIconArr[1] = mazzoScopeP1Icon;
-    mazzoTextArr[1] = mazzoP1Text;
-    avatarArr[1] = P1Avatar;
-    playerPanels[1] = westPlayerPanel;
-
-    mazzoPreseIconArr[2] = mazzoPreseIcon;
-    mazzoScopeIconArr[2] = mazzoScopeIcon;
-    mazzoTextArr[2] = mazzoText;
-    avatarArr[2] = PGAvatar;
-    playerPanels[2] = southPlayerPanel;
-
-    mazzoPreseIconArr[3] = mazzoPreseP3Icon;
-    mazzoScopeIconArr[3] = mazzoScopeP3Icon;
-    mazzoTextArr[3] = mazzoP3Text;
-    avatarArr[3] = P3Avatar;
-    playerPanels[3] = eastPlayerPanel;
-
-    for (int i = 0; i < 4; ++i)
-    {
-        mazzoScopeIconArr[i]->setStyleSheet("QLabel {border: none}");
-        mazzoPreseIconArr[i]->setStyleSheet("QLabel {border: none}");
-        mazzoTextArr[i]->setStyleSheet(playerStyle);
-        mazzoTextArr[i]->setFixedHeight(100);
-        avatarArr[i]->setStyleSheet(playerStyle);
-
-        mazzoPreseIconArr[i]->setFixedSize(60, 90); // Adatta le misure alle tue carte
-        mazzoPreseIconArr[i]->setScaledContents(true);
-        mazzoPreseIconArr[i]->setFixedHeight(70);
-        mazzoScopeIconArr[i]->setFixedHeight(70);
-        mazzoPreseIconArr[i]->setFixedWidth(50);
-        mazzoScopeIconArr[i]->setFixedWidth(50);
-
-        // 2. Forza la SizePolicy a mantenere lo spazio riservato anche se hidden/vuoto
-        QSizePolicy sp = mazzoPreseIconArr[i]->sizePolicy();
-        sp.setHorizontalPolicy(QSizePolicy::Fixed);
-        sp.setVerticalPolicy(QSizePolicy::Fixed);
-        sp.setRetainSizeWhenHidden(true); // 👈 RISERVA LO SPAZIO ANCHE SE NASCOSTO!
-        mazzoPreseIconArr[i]->setSizePolicy(sp);
-        QSizePolicy sc = mazzoScopeIconArr[i]->sizePolicy();
-        sc.setHorizontalPolicy(QSizePolicy::Fixed);
-        sc.setVerticalPolicy(QSizePolicy::Fixed);
-        sc.setRetainSizeWhenHidden(true); // 👈 RISERVA LO SPAZIO ANCHE SE NASCOSTO!
-        mazzoScopeIconArr[i]->setSizePolicy(sc);
-    };
-
-    // Score Area Setup - AREA PUNTEGGIO
-
-    QGridLayout *scoreGrid = new QGridLayout();
-
-    manoArea = new QWidget();
-    manoLabel = new QLabel();
-    manoLabel->setAlignment(Qt::AlignCenter);
-    manoLabel->setStyleSheet("font-weight: bold; font-size: 18px;");
-    manoLayout = new QHBoxLayout(manoArea);
-
-    for (int i = 0; i < 4; i++)
-    {
-
-        playerArea[i] = new QWidget();
-        QString bgColor = (i == 0 || i == 2) ? "#001a2e" : "#2e0e00";
-        QString borderColor = (i == 0 || i == 2) ? "#3db0d3" : "#d3603d";
-        playerArea[i]->setStyleSheet(QString("QWidget { background-color: %1; border: 1px solid %2; border-radius: 5px}")
-                                         .arg(bgColor)
-                                         .arg(borderColor));
-        playerArea[i]->setMinimumSize(300, 150);
-        playerScoreLayout[i] = new QHBoxLayout(playerArea[i]);
-
-        scoreAvatar[i] = new QLabel();
-        scoreAvatar[i]->setStyleSheet("QLabel {border: none}");
-        scoreAvatar[i]->setScaledContents(true);
-        scoreAvatar[i]->setFixedSize(100, 130);
-
-        QWidget *leftContainer = new QWidget();
-        QVBoxLayout *leftLayout = new QVBoxLayout(leftContainer);
-
-        QWidget *rightContainer = new QWidget();
-        QGridLayout *dataLayout = new QGridLayout(rightContainer);
-
-        nameLabel[i] = new QLabel();
-        nameLabel[i]->setStyleSheet("color: white;");
-
-        lblScope[i] = new QLabel("Scope: -");
-        lblCarte[i] = new QLabel("Carte: -");
-        lblDenari[i] = new QLabel("Denari: -");
-        lblSettebello[i] = new QLabel("Settebello: -");
-        lblPiccola[i] = new QLabel("Piccola: -");
-        lblGrande[i] = new QLabel("Grande: -");
-        primieraContainer[i] = new QWidget();
-        lblTotale[i] = new QLabel("Totale: -");
-
-        dataLayout->addWidget(lblScope[i], 0, 0);
-        dataLayout->addWidget(lblCarte[i], 1, 0);
-        dataLayout->addWidget(lblDenari[i], 1, 1);
-        dataLayout->addWidget(lblSettebello[i], 2, 0);
-
-        dataLayout->addWidget(primieraContainer[i], 2, 1);
-
-        dataLayout->addWidget(lblPiccola[i], 3, 0);
-        dataLayout->addWidget(lblGrande[i], 3, 1);
-        dataLayout->addWidget(lblTotale[i], 4, 0, 1, 2);
-
-        labelPunti[i] = new QLabel("Punti: 0");
-        labelPunti[i]->setStyleSheet("color: yellow; font-weight: bold;");
-
-        leftLayout->addWidget(scoreAvatar[i]);
-        leftLayout->addWidget(nameLabel[i]);
-        leftLayout->addWidget(labelPunti[i]);
-        leftLayout->addStretch(); // Spinge il testo in alto
-
-        playerScoreLayout[i]->addWidget(leftContainer);
-        playerScoreLayout[i]->addWidget(rightContainer);
-        playerScoreLayout[i]->addStretch();
-    }
-
-    manoLayout->addWidget(manoLabel);
-    scoreGrid->addWidget(manoArea, 0, 0, 1, 2);
-
-    for (int i = 0; i < 4; i++)
-    {
-        int riga = (i == 0 || i == 2) ? 1 : 2;
-        int colonna = (i == 0 || i == 1) ? 0 : 1;
-        scoreGrid->addWidget(playerArea[i], riga, colonna);
-    }
-
-    for (int i = 0; i < 4; ++i)
-    {
-
-        primieraLayout[i] = new QHBoxLayout(primieraContainer[i]);
-        primieraText[i] = new QLabel();
-        primieraLayout[i]->setContentsMargins(0, 0, 0, 0);
-        primieraLayout[i]->setSpacing(2);
-        for (int j = 0; j < 4; ++j)
+        this->setWindowTitle("Cirulla");
+
+        this->setFixedSize(1400, 1000);
+        stackedWidget = new QStackedWidget(this);
+
+        this->setObjectName("MainWindow"); // Importante per referenziarlo
+
+        this->setStyleSheet(
+            "QWidget#MainWindow { "
+            "   background-color: #000c18; " // Blu notte
+            "} "
+            "* { " // Questo asterisco applica a OGNI widget esistente nella finestra
+            "   background-color: transparent; "
+            "   color: #f2f3f6; "                      // Testo grigio-azzurro
+            "   font-family: 'Segoe UI', sans-serif; " // Font pulito
+            "   font-size: 20; "                       // Font pulito
+            "} "
+            "QLabel#PrimieraText { "
+            "   border: none; "
+            "   background-color: transparent; "
+            "} "
+            "QLabel { "
+            "   font-size: 16px; " // Aumenta da 14 o 15 a 16 o 18
+            "   font-weight: 500; "
+            "} "
+            "QGroupBox { "
+            "   border: 2px solid #3db0d3; "
+            "   border-radius: 10px; "
+            "   margin-top: 10px; "
+            "} "
+            "QGroupBox::title { "
+            "   color: #ffffff; "
+            "   font-weight: bold; "
+            "}");
+
+        // riferimento a homeScreen
+
+        homeScreen = new HomeScreen(this);
+        stackedWidget->addWidget(homeScreen);
+
+        // playerstyle
+        QString playerStyle =
+            "QWidget { "
+
+            "   border: 1px solid #34495e; " // Bordo discreto, non elettrico
+            "   border-radius: 12px; "       // Arrotondamento più morbido
+            "}";
+
+        QString containerStyle =
+            "QWidget { "
+            "background-color: qradialgradient(cx:0.5, cy:0.5, radius:0.8, fx:0.5, fy:0.5, stop:0 #c99ecc, stop:1 #d672ea); "
+            "}";
+
+        // CONTAINERS
+
+        // Top Player (centered)
+        player0Container = new QWidget(this);
+        player0Container->setFixedWidth(800);
+        // player0Container->setStyleSheet(playerStyle);
+        player0Container->setStyleSheet(containerStyle);
+
+        // QHBoxLayout *player0Layout = new QHBoxLayout(player0Container);
+        // player0Layout->setAlignment(Qt::AlignCenter);
+
+        // Side Players
+
+        // Per il Giocatore 1
+        player1Container = new QWidget(this);
+
+        player1Container->setMinimumSize(100, 400);
+        player1Container->setStyleSheet(containerStyle);
+
+        // Per il Giocatore 3
+        player3Container = new QWidget(this);
+        player3Container->setStyleSheet(containerStyle);
+        player3Container->setMinimumSize(100, 400);
+
+        // Apply size policies for all
+        auto setContainerStyle = [](QWidget *container, int width, int height)
         {
-            primieraThumbnails[i][j] = new QLabel();
-            primieraThumbnails[i][j]->setFixedSize(25, 35); // Dimensione miniatura
-            primieraThumbnails[i][j]->setScaledContents(true);
-            primieraLayout[i]->addWidget(primieraThumbnails[i][j]);
+            container->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+            container->setFixedSize(width, height); // Blocca fisicamente le dimensioni
+        };
+
+        setContainerStyle(player0Container, 550, 150);
+
+        // 2. Main Layout (Vertical)
+        mainLayout = new QVBoxLayout(this);
+
+        // 3. Output Area (Separate, full-width row)
+        // outputArea = new QTextEdit(this);
+        // outputArea->setReadOnly(true);
+        // outputArea->setMaximumHeight(10);
+        // outputArea->hide();
+        // mainLayout->addWidget(outputArea);
+
+        infoOverlay = new QFrame(this);
+        infoOverlay->setStyleSheet("font-weight: bold; font-size: 18px;");
+
+        overlayLayout = new QHBoxLayout(infoOverlay);
+        overlayLayout->setContentsMargins(10, 0, 10, 0);
+
+        infoOverlay->setFixedHeight(70);
+
+        infoLabel = new QLabel("CIRULLA", infoOverlay);
+        button = new QPushButton("Inizia il Gioco", infoOverlay);
+
+        overlayLayout->addStretch(1);
+
+        overlayLayout->addWidget(infoLabel);
+
+        overlayLayout->addWidget(button);
+
+        overlayLayout->addStretch(1);
+
+        mainLayout->addWidget(infoOverlay);
+
+        // Game Area
+
+        gameArea = new QWidget(this);
+
+        gameLayout = new QGridLayout(gameArea);
+        gameLayout->setContentsMargins(0, 0, 0, 0); // Nessun margine extra
+
+        gameLayout->setColumnStretch(0, 0); // Fissa larghezza Ovest
+        gameLayout->setColumnStretch(1, 1); // Il Tavolo centrale si espande!
+        gameLayout->setColumnStretch(2, 0); // Fissa larghezza Est
+
+        gameLayout->setRowStretch(0, 0); // Fissa altezza Nord
+        gameLayout->setRowStretch(1, 1); // Il Tavolo centrale si espande!
+        gameLayout->setRowStretch(2, 0); // Fissa altezza Sud
+
+        mazzoPreseP0Icon = new QLabel(this);
+        mazzoScopeP0Icon = new QLabel(this);
+
+        mazzoP0Text = new QLabel("Prese: 0\nScope: 0", this);
+
+        P0Avatar = new QLabel(this);
+        P0Avatar->setFixedSize(100, 130);
+
+        // --- BLOCCO NORD (Giocatore in alto) ---
+        QWidget *northPlayerPanel = new QWidget(this);
+        northPlayerPanel->setStyleSheet(playerStyle);
+        setContainerStyle(northPlayerPanel, 900, 200);
+
+        QHBoxLayout *northLayout = new QHBoxLayout(northPlayerPanel);
+        northLayout->addWidget(P0Avatar);
+        northLayout->addWidget(mazzoP0Text);
+        northLayout->addWidget(mazzoScopeP0Icon);
+        northLayout->addWidget(mazzoPreseP0Icon);
+
+        QHBoxLayout *p0Layout = new QHBoxLayout(player0Container);
+        northLayout->addWidget(player0Container);
+
+        gameLayout->addWidget(northPlayerPanel, 0, 1, Qt::AlignCenter); // Sopra
+
+        mazzoPreseP3Icon = new QLabel(this);
+        mazzoScopeP3Icon = new QLabel(this);
+        mazzoP3Text = new QLabel(this);
+        P3Avatar = new QLabel(this);
+        P3Avatar->setFixedSize(100, 130);
+
+        mazzoPreseP1Icon = new QLabel(this);
+        mazzoScopeP1Icon = new QLabel(this);
+        mazzoP1Text = new QLabel(this);
+        P1Avatar = new QLabel(this);
+        P1Avatar->setFixedSize(100, 130);
+
+        mazzoScopeP1Icon->setFixedHeight(100);
+        mazzoScopeP1Icon->setFixedHeight(100);
+
+        player1Container->setFixedWidth(100); // Scegli una misura che ti piace
+        mazzoScopeP1Icon->setFixedWidth(100);
+        mazzoP1Text->setFixedWidth(100);
+        player3Container->setFixedWidth(100);
+        mazzoScopeP3Icon->setFixedWidth(100);
+        mazzoP3Text->setFixedWidth(100);
+
+        // Forza la policy a Fixed per non permettere espansioni
+        mazzoScopeP1Icon->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+        mazzoScopeP3Icon->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+        player1Container->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+        player3Container->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+
+        // --- BLOCCO OVEST (Giocatore a sinistra) ---
+        QWidget *westPlayerPanel = new QWidget(this);
+        westPlayerPanel->setStyleSheet(playerStyle);
+        setContainerStyle(westPlayerPanel, 240, 420);
+        QHBoxLayout *westLayout = new QHBoxLayout(westPlayerPanel); // In verticale perché sta sul lato
+
+        QWidget *westInfoWidget = new QWidget();
+        QVBoxLayout *westInfoLayout = new QVBoxLayout(westInfoWidget);
+        westInfoLayout->addWidget(P1Avatar);
+        westInfoLayout->addWidget(mazzoP1Text);
+
+        westInfoLayout->addWidget(mazzoScopeP1Icon);
+        westInfoLayout->addWidget(mazzoPreseP1Icon);
+
+        QVBoxLayout *p1Layout = new QVBoxLayout(player1Container);
+        westLayout->addWidget(westInfoWidget);
+
+        westLayout->addWidget(player1Container);
+        gameLayout->addWidget(westPlayerPanel, 1, 0, Qt::AlignCenter); // Sinistra
+
+        // BLOCCO EST -- Giocatore a destra
+
+        QWidget *eastPlayerPanel = new QWidget(this);
+        eastPlayerPanel->setStyleSheet(playerStyle);
+
+        setContainerStyle(eastPlayerPanel, 240, 420);
+
+        QWidget *eastInfoWidget = new QWidget();
+        QVBoxLayout *eastInfoLayout = new QVBoxLayout(eastInfoWidget);
+
+        QHBoxLayout *eastLayout = new QHBoxLayout(eastPlayerPanel);
+
+        eastInfoLayout->addWidget(P3Avatar);
+        eastInfoLayout->addWidget(mazzoP3Text);
+
+        eastInfoLayout->addWidget(mazzoScopeP3Icon);
+        eastInfoLayout->addWidget(mazzoPreseP3Icon);
+
+        QVBoxLayout *p3Layout = new QVBoxLayout(player3Container);
+        eastLayout->addWidget(player3Container);
+        eastLayout->addWidget(eastInfoWidget);
+        gameLayout->addWidget(eastPlayerPanel, 1, 2, Qt::AlignCenter); // Destra
+
+        QGroupBox *tableContainer = new QGroupBox();
+
+        tableContainer->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+        // Forza il widget a ignorare le dimensioni minime calcolate dai figli
+        tableContainer->setFixedHeight(400);
+        tableContainer->setFixedWidth(800);
+        tableContainer->setStyleSheet(
+            "QGroupBox { "
+            "   background-color: qradialgradient(cx:0.5, cy:0.5, radius:0.8, fx:0.5, fy:0.5, stop:0 #27ae60, stop:1 #1e8449); "
+            "   border: 4px solid #144d26; "
+            "   border-radius: 15px; "
+            "   font-weight: bold; color: #ffffff; "
+            "}");
+
+        tableLayout = new QGridLayout(tableContainer);
+        tableLayout->setAlignment(Qt::AlignCenter);
+        tableContainer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        gameLayout->addWidget(tableContainer, 1, 1, Qt::AlignCenter); // Centro
+
+        // Add table to center column and make it stretch
+
+        QWidget *handContainer = new QWidget(this);
+
+        handContainer->setStyleSheet(containerStyle);
+
+        setContainerStyle(handContainer, 550, 150);
+
+        PGAvatar = new QLabel(this);
+        PGAvatar->setFixedSize(100, 130);
+
+        mazzoPreseIcon = new QLabel();
+        mazzoText = new QLabel("Scope: 0\nPrese: 0", this);
+        mazzoScopeIcon = new QLabel();
+
+        // --- BLOCCO SUD (Il tuo giocatore in basso) ---
+        QWidget *southPlayerPanel = new QWidget(this);
+        setContainerStyle(southPlayerPanel, 900, 200);
+        southPlayerPanel->setStyleSheet(playerStyle);
+
+        QHBoxLayout *southLayout = new QHBoxLayout(southPlayerPanel); // Orizzontale in basso
+        southLayout->addWidget(PGAvatar);
+        southLayout->addWidget(mazzoText);
+
+        southLayout->addWidget(mazzoScopeIcon);
+        southLayout->addWidget(mazzoPreseIcon);
+
+        handLayout = new QHBoxLayout(handContainer);
+
+        southLayout->addWidget(handContainer);
+        gameLayout->addWidget(southPlayerPanel, 2, 1, Qt::AlignCenter); // Sotto
+
+        gameLayout->setAlignment(Qt::AlignCenter);
+        mainLayout->setAlignment(Qt::AlignCenter);
+
+        stackedWidget->addWidget(gameArea);
+
+        scoreArea = new QWidget();
+
+        // Il padre ha un layout verticale di base
+
+        mainLayout->addWidget(stackedWidget);
+
+        // Collegamento con array di puntatori
+
+        for (int i = 0; i < 4; ++i)
+        {
+            avatarArr[i] = nullptr; // Fondamentale!
+            playerPanels[i] = nullptr;
         }
-    }
 
-    scoreArea->setLayout(scoreGrid);
-    stackedWidget->addWidget(scoreArea);
+        mazzoPreseIconArr[0] = mazzoPreseP0Icon;
+        mazzoScopeIconArr[0] = mazzoScopeP0Icon;
+        mazzoTextArr[0] = mazzoP0Text;
+        avatarArr[0] = P0Avatar;
+        playerPanels[0] = northPlayerPanel;
 
-    // 7. Initialization
+        mazzoPreseIconArr[1] = mazzoPreseP1Icon;
+        mazzoScopeIconArr[1] = mazzoScopeP1Icon;
+        mazzoTextArr[1] = mazzoP1Text;
+        avatarArr[1] = P1Avatar;
+        playerPanels[1] = westPlayerPanel;
 
-    updateOverlay("", "", false);
-    connect(button, &QPushButton::clicked, this, &Cirulla::onGlobalOverlayClicked);
+        mazzoPreseIconArr[2] = mazzoPreseIcon;
+        mazzoScopeIconArr[2] = mazzoScopeIcon;
+        mazzoTextArr[2] = mazzoText;
+        avatarArr[2] = PGAvatar;
+        playerPanels[2] = southPlayerPanel;
 
-    connect(homeScreen, &HomeScreen::startRequested, this, [this](QString p)
+        mazzoPreseIconArr[3] = mazzoPreseP3Icon;
+        mazzoScopeIconArr[3] = mazzoScopeP3Icon;
+        mazzoTextArr[3] = mazzoP3Text;
+        avatarArr[3] = P3Avatar;
+        playerPanels[3] = eastPlayerPanel;
+
+        for (int i = 0; i < 4; ++i)
+        {
+            mazzoScopeIconArr[i]->setStyleSheet("QLabel {border: none}");
+            mazzoPreseIconArr[i]->setStyleSheet("QLabel {border: none}");
+            mazzoTextArr[i]->setStyleSheet(playerStyle);
+            mazzoTextArr[i]->setFixedHeight(100);
+            avatarArr[i]->setStyleSheet(playerStyle);
+
+            mazzoPreseIconArr[i]->setFixedSize(60, 90); // Adatta le misure alle tue carte
+            mazzoPreseIconArr[i]->setScaledContents(true);
+            mazzoPreseIconArr[i]->setFixedHeight(70);
+            mazzoScopeIconArr[i]->setFixedHeight(70);
+            mazzoPreseIconArr[i]->setFixedWidth(50);
+            mazzoScopeIconArr[i]->setFixedWidth(50);
+
+            // 2. Forza la SizePolicy a mantenere lo spazio riservato anche se hidden/vuoto
+            QSizePolicy sp = mazzoPreseIconArr[i]->sizePolicy();
+            sp.setHorizontalPolicy(QSizePolicy::Fixed);
+            sp.setVerticalPolicy(QSizePolicy::Fixed);
+            sp.setRetainSizeWhenHidden(true); // 👈 RISERVA LO SPAZIO ANCHE SE NASCOSTO!
+            mazzoPreseIconArr[i]->setSizePolicy(sp);
+            QSizePolicy sc = mazzoScopeIconArr[i]->sizePolicy();
+            sc.setHorizontalPolicy(QSizePolicy::Fixed);
+            sc.setVerticalPolicy(QSizePolicy::Fixed);
+            sc.setRetainSizeWhenHidden(true); // 👈 RISERVA LO SPAZIO ANCHE SE NASCOSTO!
+            mazzoScopeIconArr[i]->setSizePolicy(sc);
+        };
+
+        // Score Area Setup - AREA PUNTEGGIO
+
+        QGridLayout *scoreGrid = new QGridLayout();
+
+        manoArea = new QWidget();
+        manoLabel = new QLabel();
+        manoLabel->setAlignment(Qt::AlignCenter);
+        manoLabel->setStyleSheet("font-weight: bold; font-size: 18px;");
+        manoLayout = new QHBoxLayout(manoArea);
+
+        for (int i = 0; i < 4; i++)
+        {
+
+            playerArea[i] = new QWidget();
+            QString bgColor = (i == 0 || i == 2) ? "#001a2e" : "#2e0e00";
+            QString borderColor = (i == 0 || i == 2) ? "#3db0d3" : "#d3603d";
+            playerArea[i]->setStyleSheet(QString("QWidget { background-color: %1; border: 1px solid %2; border-radius: 5px}")
+                                             .arg(bgColor)
+                                             .arg(borderColor));
+            playerArea[i]->setMinimumSize(300, 150);
+            playerScoreLayout[i] = new QHBoxLayout(playerArea[i]);
+
+            scoreAvatar[i] = new QLabel();
+            scoreAvatar[i]->setStyleSheet("QLabel {border: none}");
+            scoreAvatar[i]->setScaledContents(true);
+            scoreAvatar[i]->setFixedSize(100, 130);
+
+            QWidget *leftContainer = new QWidget();
+            QVBoxLayout *leftLayout = new QVBoxLayout(leftContainer);
+
+            QWidget *rightContainer = new QWidget();
+            QGridLayout *dataLayout = new QGridLayout(rightContainer);
+
+            nameLabel[i] = new QLabel();
+            nameLabel[i]->setStyleSheet("color: white;");
+
+            lblScope[i] = new QLabel("Scope: -");
+            lblCarte[i] = new QLabel("Carte: -");
+            lblDenari[i] = new QLabel("Denari: -");
+            lblSettebello[i] = new QLabel("Settebello: -");
+            lblPiccola[i] = new QLabel("Piccola: -");
+            lblGrande[i] = new QLabel("Grande: -");
+            primieraContainer[i] = new QWidget();
+            lblTotale[i] = new QLabel("Totale: -");
+
+            dataLayout->addWidget(lblScope[i], 0, 0);
+            dataLayout->addWidget(lblCarte[i], 1, 0);
+            dataLayout->addWidget(lblDenari[i], 1, 1);
+            dataLayout->addWidget(lblSettebello[i], 2, 0);
+
+            dataLayout->addWidget(primieraContainer[i], 2, 1);
+
+            dataLayout->addWidget(lblPiccola[i], 3, 0);
+            dataLayout->addWidget(lblGrande[i], 3, 1);
+            dataLayout->addWidget(lblTotale[i], 4, 0, 1, 2);
+
+            labelPunti[i] = new QLabel("Punti: 0");
+            labelPunti[i]->setStyleSheet("color: yellow; font-weight: bold;");
+
+            leftLayout->addWidget(scoreAvatar[i]);
+            leftLayout->addWidget(nameLabel[i]);
+            leftLayout->addWidget(labelPunti[i]);
+            leftLayout->addStretch(); // Spinge il testo in alto
+
+            playerScoreLayout[i]->addWidget(leftContainer);
+            playerScoreLayout[i]->addWidget(rightContainer);
+            playerScoreLayout[i]->addStretch();
+        }
+
+        manoLayout->addWidget(manoLabel);
+        scoreGrid->addWidget(manoArea, 0, 0, 1, 2);
+
+        for (int i = 0; i < 4; i++)
+        {
+            int riga = (i == 0 || i == 2) ? 1 : 2;
+            int colonna = (i == 0 || i == 1) ? 0 : 1;
+            scoreGrid->addWidget(playerArea[i], riga, colonna);
+        }
+
+        for (int i = 0; i < 4; ++i)
+        {
+
+            primieraLayout[i] = new QHBoxLayout(primieraContainer[i]);
+            primieraText[i] = new QLabel();
+            primieraLayout[i]->setContentsMargins(0, 0, 0, 0);
+            primieraLayout[i]->setSpacing(2);
+            for (int j = 0; j < 4; ++j)
             {
+                primieraThumbnails[i][j] = new QLabel();
+                primieraThumbnails[i][j]->setFixedSize(25, 35); // Dimensione miniatura
+                primieraThumbnails[i][j]->setScaledContents(true);
+                primieraLayout[i]->addWidget(primieraThumbnails[i][j]);
+            }
+        }
+
+        scoreArea->setLayout(scoreGrid);
+        stackedWidget->addWidget(scoreArea);
+
+        // 7. Initialization
+
+        updateOverlay("", "", false);
+        connect(button, &QPushButton::clicked, this, &Cirulla::onGlobalOverlayClicked);
+
+        connect(homeScreen, &HomeScreen::startRequested, this, [this](QString p)
+                {
                 stackedWidget->setCurrentIndex(1);
                 updateOverlay("CIRULLA", "Inizia il Gioco", true);
                 statoAttualeBottone = FaseBottone::FaseAvvio; 
                 bool giocoACoppie = homeScreen->isCoupleMode();
                 this->setupGame(getPlayers(p), giocoACoppie); });
+    }
 }
-
 void Cirulla::mainScreen()
 {
 
+    // --- 1. AGGIORNAMENTO STATISTICHE E SALVATAGGIO (Logica Pura - Critico per Headless) ---
     for (int i = 0; i < state.seats.size(); ++i)
     {
         ++config.players[i].playedMatches;
         fprintf(stderr, "salvando stats giocatore %d\n", i);
+        fflush(stderr);
         CharacterManager::updatePlayerStats(config.players[i]);
     }
-    updateOverlay("", "", false);
-    clearScopeAndPreseLabels();
-    stackedWidget->setCurrentIndex(0);
+
+    // --- 2. GESTIONE GRAFICA E INTERFACCIA (Solo GUI) ---
+    if (!testGameMode)
+    {
+        updateOverlay("", "", false);
+        clearScopeAndPreseLabels();
+        stackedWidget->setCurrentIndex(0);
+    }
+    else
+    {
+        emit gameFinished(config.players);
+    }
 }
 
 void Cirulla::startGame()
@@ -510,6 +525,12 @@ void Cirulla::startGame()
     state.dealerIndex = selectDealer();
 
     currentGamePhase = STATE_READY_TO_START;
+
+    if (testGameMode)
+    {
+        executeDeal();
+        return;
+    }
 
     // 2. Prepariamo l'interfaccia per la pausa
     QString dealerName = state.seats[state.dealerIndex].name;
@@ -525,6 +546,7 @@ QVector<ProfileData> Cirulla::getPlayers(QString p)
 
 void Cirulla::executeDeal()
 {
+
     for (int i = 0; i < state.seats.size(); ++i)
     {
         if (state.seats[i].mood == Mood::Happy || state.seats[i].mood == Mood::Annoyed)
@@ -542,7 +564,10 @@ void Cirulla::executeDeal()
         }
     }
 
-    button->setEnabled(false);
+    if (!testGameMode)
+    {
+        button->setEnabled(false);
+    }
 
     if (isTestMode)
     {
@@ -557,19 +582,8 @@ void Cirulla::executeDeal()
 
     // 3. Deal match cards and draw hands
     state.tableCards.clear();
+
     initialDeal();
-
-    // for (int i = 0; i < 4; i++)
-    // {
-    //     int indiceGiocatore = (state.dealerIndex + 1 + i) % 4;
-
-    //     PlayerState &giocatore = state.seats[indiceGiocatore];
-    //     QString mano;
-    //     for (auto &c : giocatore.hand)
-    //         mano += QString::number(c.id) + " ";
-    //     // fprintf(stderr, "DEBUG: Mano Giocatore %d: %s\n", indiceGiocatore, mano.toStdString().c_str());
-    //     // fflush(stderr);
-    // }
 
     showHandsAfterDeal([this]()
                        {
@@ -580,9 +594,14 @@ void Cirulla::executeDeal()
 
 void Cirulla::setupGame(const QVector<ProfileData> &players, bool giocoACoppie)
 {
+
     hardReset();
 
-    updateOverlay("CIRULLA", "Inizia il Gioco", true);
+    if (!testGameMode)
+    {
+        updateOverlay("CIRULLA", "Inizia il Gioco", true);
+    }
+
     statoAttualeBottone = FaseBottone::FaseAvvio;
 
     state.seats.clear();
@@ -600,15 +619,21 @@ void Cirulla::setupGame(const QVector<ProfileData> &players, bool giocoACoppie)
         PlayerState p;
         p.id = i;
         p.totaleScope = 0;
-        config.players[i].moves.clear(); // Inizializza lo storico delle mosse per ogni giocatore
-        QString avatarPath = config.players[i].avatarPath;
-        QPixmap cardImage(avatarPath);
+        config.players[i].moves.clear();
+        // Inizializza lo storico delle mosse per ogni giocatore
 
-        if (avatarArr[i])
+        // non esegue GUI in modalità test
+        if (!testGameMode)
         {
+            QString avatarPath = config.players[i].avatarPath;
+            QPixmap cardImage(avatarPath);
 
-            avatarArr[i]->setPixmap(cardImage.scaled(120, 140, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-            applyRoundedCorners(avatarArr[i]);
+            if (avatarArr[i])
+            {
+
+                avatarArr[i]->setPixmap(cardImage.scaled(120, 140, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+                applyRoundedCorners(avatarArr[i]);
+            }
         }
 
         if (i == config.humanSeatIndex && botGame == false)
@@ -624,6 +649,12 @@ void Cirulla::setupGame(const QVector<ProfileData> &players, bool giocoACoppie)
         }
         state.seats.append(p);
         aggiornaStats(p.id);
+    }
+    if (testGameMode)
+    {
+        // In modalità test, bypassiamo il click del bottone e avviamo la partita direttamente
+
+        startGame();
     }
 }
 
@@ -675,6 +706,11 @@ void Cirulla::initialDeal()
 
 void Cirulla::showTable()
 {
+    if (testGameMode)
+    {
+        return; // Non eseguire GUI in modalità test
+    }
+
     while (QLayoutItem *item = tableLayout->takeAt(0))
     {
         if (QWidget *oldWidget = item->widget())
@@ -780,6 +816,12 @@ void Cirulla::dealersChance()
         }
 
         state.tableCards.clear();
+
+        if (testGameMode)
+        {
+            processTurn(); // Continua il turno senza GUI in modalità test
+            return;
+        }
         showTable(); // Aggiorna il tavolo solo dopo la pausa
         // outputArea->append("Il tavolo è stato ripulito.");
         statoAttualeBottone = FaseBottone::DopoScopaMazziere;
@@ -1060,6 +1102,10 @@ int Cirulla::cardValue(const Carta &carta)
 
 void Cirulla::showHands()
 {
+    if (testGameMode)
+    {
+        return; // Non eseguire GUI in modalità test
+    }
     for (int seat = 0; seat < 4; ++seat)
     {
         PlayerState player = state.seats[seat];
@@ -1086,6 +1132,15 @@ void Cirulla::showHands()
 
 void Cirulla::showHandsAfterDeal(std::function<void()> onComplete)
 {
+    if (testGameMode)
+    {
+        // In modalità test, bypassiamo l'animazione e chiami direttamente la funzione di callback
+        if (onComplete)
+        {
+            onComplete();
+        }
+        return;
+    }
     int firstPlayerIndex = (state.dealerIndex + 1) % 4;
     int stepDelay = waitTime / 5;
     int totalCards = 3 * 4;
@@ -1144,6 +1199,7 @@ bool Cirulla::all_cards_same(const QVector<Carta> &carte)
 
 void Cirulla::processTurn()
 {
+
     if (isWaitingForBuona)
         return;
 
@@ -1152,15 +1208,17 @@ void Cirulla::processTurn()
 
     if (currentPlayerIndex < 0 || currentPlayerIndex >= state.seats.size())
         return;
-    updateOverlay("Turno: " + state.seats[currentPlayerIndex].name, "", false);
-    for (int i = 0; i < 4; ++i)
-    {
-        // Accendi se è il suo turno, spegni per tutti gli altri
-        bool isCurrent = (i == currentPlayerIndex);
-        setAvatarHighlighted(i, isCurrent);
-    }
 
-    // outputArea->append("Turno: " + state.seats[currentPlayerIndex].name);
+    if (!testGameMode) // ESCLUDI FUNZIONE GUI IN MODALITÀ TEST
+    {
+        updateOverlay("Turno: " + state.seats[currentPlayerIndex].name, "", false);
+        for (int i = 0; i < 4; ++i)
+        {
+            // Accendi se è il suo turno, spegni per tutti gli altri
+            bool isCurrent = (i == currentPlayerIndex);
+            setAvatarHighlighted(i, isCurrent);
+        }
+    }
 
     bool isStartOfHand = (state.seats[currentPlayerIndex].hand.size() == 3);
     bool notYetDeclared = (!state.seats[currentPlayerIndex].carteScoperte);
@@ -1171,29 +1229,44 @@ void Cirulla::processTurn()
         {
             isWaitingForBuona = true;
             applyBuonaDaDieci(currentPlayerIndex);
-            QString nomeGiocatore = (currentPlayerIndex == config.humanSeatIndex) ? "Tu" : "Il Giocatore " + config.players[currentPlayerIndex].name;
-            QString verbo = (currentPlayerIndex == config.humanSeatIndex) ? " hai " : " ha ";
-            QString messaggio = verbo + "bussato e " + verbo + "fatto 10 scope!";
             state.seats[currentPlayerIndex].mood = Mood::Happy;
-            changeExpression("happy", currentPlayerIndex);
-            statoAttualeBottone = FaseBottone::FaseDopoBuona;
 
-            updateOverlay(nomeGiocatore + messaggio, "OK", true);
-
+            if (!testGameMode)
+            {
+                QString nomeGiocatore = (currentPlayerIndex == config.humanSeatIndex) ? "Tu" : "Il Giocatore " + config.players[currentPlayerIndex].name;
+                QString verbo = (currentPlayerIndex == config.humanSeatIndex) ? " hai " : " ha ";
+                QString messaggio = verbo + "bussato e " + verbo + "fatto 10 scope!";
+                changeExpression("happy", currentPlayerIndex);
+                statoAttualeBottone = FaseBottone::FaseDopoBuona;
+                updateOverlay(nomeGiocatore + messaggio, "OK", true);
+            }
+            else
+            {
+                isWaitingForBuona = false; // record 'buona' in headless mode, no GUI needed
+                processTurn();
+            }
             return;
         }
         else if (checkBuonaDaTre(currentPlayerIndex))
         {
             isWaitingForBuona = true;
             applyBuonaDaTre(currentPlayerIndex);
-            QString nomeGiocatore = (currentPlayerIndex == config.humanSeatIndex) ? "Tu" : "Il Giocatore " + config.players[currentPlayerIndex].name;
-            QString verbo = (currentPlayerIndex == config.humanSeatIndex) ? " hai " : " ha ";
-            QString messaggio = verbo + "bussato e " + verbo + "fatto 3 scope!";
             state.seats[currentPlayerIndex].mood = Mood::Happy;
-            changeExpression("happy", currentPlayerIndex);
 
-            statoAttualeBottone = FaseBottone::FaseDopoBuona;
-            updateOverlay(nomeGiocatore + messaggio, "OK", true);
+            if (!testGameMode)
+            {
+                QString nomeGiocatore = (currentPlayerIndex == config.humanSeatIndex) ? "Tu" : "Il Giocatore " + config.players[currentPlayerIndex].name;
+                QString verbo = (currentPlayerIndex == config.humanSeatIndex) ? " hai " : " ha ";
+                QString messaggio = verbo + "bussato e " + verbo + "fatto 3 scope!";
+                changeExpression("happy", currentPlayerIndex);
+                statoAttualeBottone = FaseBottone::FaseDopoBuona;
+                updateOverlay(nomeGiocatore + messaggio, "OK", true);
+            }
+            else
+            {
+                isWaitingForBuona = false; // record 'buona' in headless mode, no GUI needed
+                processTurn();
+            }
             return;
         }
     }
@@ -1228,13 +1301,24 @@ void Cirulla::processTurn()
     {
         // Se è un bot, disabilitiamo l'input e avviamo la sua logica
         enableHandInteraction(false);
+        if (testGameMode)
+        {
 
-        QTimer::singleShot(waitTime, this, &Cirulla::botPlay); // Delay per realismo
+            botPlay(); // In modalità test, esegui subito la mossa del bot
+        }
+        else
+        {
+
+            QTimer::singleShot(waitTime, this, &Cirulla::botPlay); // Delay per realismo
+        }
     }
 }
 
 void Cirulla::enableHandInteraction(bool enabled)
 {
+    if (testGameMode)
+        return; // Non eseguire GUI in modalità test
+
     // Supponendo che 'handLayout' contenga i widget delle carte
     for (int i = 0; i < handLayout->count(); ++i)
     {
@@ -1305,7 +1389,10 @@ void Cirulla::playCard(int handIndex, QList<int> &tableIndices)
     // 1. Esegui la mossa
     makeMove(handIndex, tableIndices);
     enableHandInteraction(false);
-    updatePlayerUI(state.currentTurnIndex);
+    if (!testGameMode)
+    {
+        updatePlayerUI(state.currentTurnIndex);
+    }
 
     bool tuttiHannoFinito = true;
     for (const auto &player : state.seats)
@@ -1320,12 +1407,22 @@ void Cirulla::playCard(int handIndex, QList<int> &tableIndices)
     // 2. Gestione fine mano
     if (tuttiHannoFinito)
     {
-        // fprintf(stderr, "Tutti hanno finito!\n");
-        // fflush(stderr);
         if (state.deckIndex < state.deck.size())
         {
             for (auto &player : state.seats)
                 player.carteScoperte = false;
+
+            if (testGameMode)
+            {
+
+                dealNextRound([this]()
+                              {
+                                  state.currentTurnIndex = (state.dealerIndex + 1) % state.seats.size();
+
+                                  processTurn(); // Riprende il gioco in sicurezza!
+                              });
+                return;
+            }
 
             // Chiamiamo dealNextRound passando il blocco da eseguire a fine animazione
             QTimer::singleShot(waitTime / 2, this, [this]
@@ -1359,16 +1456,34 @@ void Cirulla::playCard(int handIndex, QList<int> &tableIndices)
 
             if (!state.tableCards.isEmpty())
             {
-                updateOverlay("Le carte in tavola vanno a " + ultimoAPrendere.name, "", false);
-
+                if (!testGameMode)
+                {
+                    updateOverlay("Le carte in tavola vanno a " + ultimoAPrendere.name, "", false);
+                }
                 for (auto &card : state.tableCards)
                 {
                     ultimoAPrendere.prese.append(card);
                 }
             }
 
-            QTimer::singleShot(waitTime * 1.5, this, [this, lastOneId]()
-                               {
+            if (testGameMode)
+            {
+
+                // In modalità test chiudiamo la partita immediatamente senza timer a catena
+                PlayerState &player = this->state.seats[lastOneId];
+                this->aggiornaMazzoPrese(player);
+                this->state.tableCards.clear();
+                if (!testGameMode)
+                    this->showTable(); // protetto comunque da showTable
+
+                this->handleEndOfGame();
+                return;
+            }
+            else
+            {
+
+                QTimer::singleShot(waitTime * 1.5, this, [this, lastOneId]()
+                                   {
     // 1. Dopo 1 secondo: svuota il tavolo e aggiorna la grafica
     if (this->state.phase != MatchPhase::Playing) return;
 
@@ -1385,16 +1500,17 @@ void Cirulla::playCard(int handIndex, QList<int> &tableIndices)
         // 3. Dopo un altro secondo, vai alla schermata finale
         this->handleEndOfGame();
     }); });
-            return; // Partita finita, non chiamare processTurn
+
+                return; // Partita finita, non chiamare processTurn
+            }
         }
     }
     else
     {
-        // 3. PASSAGGIO TURNO: Solo questo!
+        // 3. PASSAGGIO TURNO
         selectedHandCardIndex = -1;
         selectedTableIndices.clear();
         state.currentTurnIndex = (state.currentTurnIndex + 1) % state.seats.size();
-        // outputArea->append("DEBUG: Turno passato a " + state.seats[state.currentTurnIndex].name);
     }
 
     // 4. L'UNICA COSA DA FARE: chiamare il regista
@@ -1486,20 +1602,12 @@ void Cirulla::makeMove(int handIndex, QList<int> &tableIndices)
                             { return a.id == b.id; });
     state.playedCards.erase(last, state.playedCards.end());
 
-    // fprintf(stderr, "Played cards: ");
-    // for (int i = 0; i < state.playedCards.length(); ++i)
-    // {
-    //     fprintf(stderr, "%d-", state.playedCards[i].id);
-    // }
-    // fprintf(stderr, "Size: %d\n", state.playedCards.size());
-    // fflush(stderr);
-
-    // Rimuovi la carta dalla mano del giocatore
     giocatore.hand.removeAt(handIndex);
 }
 
 void Cirulla::botPlay()
 {
+
     if (isWaitingForBuona)
         return;
     PlayerState &bot = state.seats[state.currentTurnIndex];
@@ -1562,19 +1670,27 @@ void Cirulla::botPlay()
         currentSit.table = state.tableCards;
         currentSit.alreadyPlayed = state.playedCards;
         currentSit.normalize();
-
-        // Uniamo intestazione e toString() in un'unica stringa pulita
-        // QString logMsg = QString("Bot %1-%2 mano %3, situazione:\n%4\n")
-        //                      .arg(state.currentTurnIndex + 1)
-        //                      .arg(config.players[state.currentTurnIndex].name)
-        //                      .arg(state.hand)
-        //                      .arg(currentSit.toString());
-
-        // fprintf(stderr, "%s", logMsg.toLocal8Bit().constData());
-        // fflush(stderr);
-
         config.players[state.currentTurnIndex].moves.push_back(currentSit);
         executeBotMove(*bestMossa);
+    }
+    else
+    {
+        // --- FALLBACK DI EMERGENZA PER EVITARE DEADLOCK ---
+        fprintf(stderr, "ERRORE CRITICO: mosseValide vuote per il Bot %d! Forzo scarto di emergenza.\n", state.currentTurnIndex);
+        fflush(stderr);
+
+        if (!bot.hand.isEmpty())
+        {
+            Mossa mossaEmergenza;
+            mossaEmergenza.handIndex = 0;
+            mossaEmergenza.tableIndices = {};
+            executeBotMove(mossaEmergenza);
+        }
+        else
+        {
+            // Se la mano è davvero vuota, dobbiamo passare il turno per forza per evitare il blocco totale
+            // (es. chiama una funzione tipo avanzaTurno() o simile se esiste nel tuo motore)
+        }
     }
 }
 
@@ -1778,25 +1894,10 @@ QVector<Mossa> Cirulla::trovaTutteLePrese(int handIndex)
             }
         }
 
-        // LOGICA UNIFICATA
-        // if (isMatta)
-        // {
-        //     // La matta prende se sommaTavolo è un valore che lei può "coprire"
-        //     // Caso 1: Presa normale (sommaTavolo tra 1 e 10)
-        //     // Caso 2: Presa 15 (sommaTavolo tra 5 e 14, perché 15 - [1..10] = [14..5])
-        //     if (sommaTavolo >= 1 && sommaTavolo <= 14)
-        //     {
-        //         prese.append({handIndex, combo});
-        //     }
-        // }
-        // else
-        // {
-        // Logica per carte normali
         if (sommaTavolo == valore || (sommaTavolo + valore == 15))
         {
             prese.append({handIndex, combo});
         }
-        // }
     }
     return prese;
 }
@@ -1877,12 +1978,21 @@ bool Cirulla::isCurrentPlayerBot() const
 
 void Cirulla::executeBotMove(const Mossa &m)
 {
-    revealedCardIndex = m.handIndex;
-    showHands();
 
     int handIdx = m.handIndex;
     QList<int> tableIndices = m.tableIndices;
 
+    if (testGameMode)
+    {
+        if (this->state.phase != MatchPhase::Playing)
+            return;
+
+        this->playCard(handIdx, tableIndices);
+        return;
+    }
+
+    revealedCardIndex = m.handIndex;
+    showHands();
     QTimer::singleShot(waitTime, this, [this, handIdx, tableIndices]()
 
                        {
@@ -1950,13 +2060,41 @@ void Cirulla::dealNextRound(std::function<void()> onComplete)
     {
         if (state.seats[i].mood == Mood::Happy || state.seats[i].mood == Mood::Annoyed)
         {
-            changeExpression("normal", i);
+            if (!testGameMode)
+            {
+                changeExpression("normal", i);
+            }
             state.seats[i].mood = Mood::Normal;
         }
     }
 
     // 2. Distribuzione animata carta per carta
     int firstPlayerIndex = (state.dealerIndex + 1) % 4;
+
+    // CASO HEADLESS: Distribuzione immediata senza animazioni
+    if (testGameMode)
+    {
+        for (int i = 0; i < 3; ++i)
+        {
+            for (int p = 0; p < 4; ++p)
+            {
+                int currentPlayerIndex = (firstPlayerIndex + p) % 4;
+                PlayerState &giocatore = state.seats[currentPlayerIndex];
+
+                if (state.deckIndex < state.deck.size())
+                {
+                    giocatore.hand.append(state.deck[state.deckIndex++]);
+                }
+            }
+        }
+
+        if (onComplete)
+        {
+            onComplete();
+        }
+        return;
+    }
+
     int stepDelay = 200;
     int totalCards = 3 * 4; // 12 carte totali (3 giri x 4 giocatori)
     int globalCounter = 0;
@@ -2011,39 +2149,43 @@ void Cirulla::dealNextRound(std::function<void()> onComplete)
 
 void Cirulla::handleEndOfGame()
 {
-
-    for (int i = 0; i < 4; i++)
+    // --- 1. AGGIORNAMENTO GRAFICO AVATAR (Solo GUI) ---
+    if (!testGameMode)
     {
-        nameLabel[i]->setText(config.players[i].name);
-        QString avatarPath = config.players[i].avatarPath;
-        QPixmap cardImage(avatarPath);
+        for (int i = 0; i < 4; i++)
+        {
+            nameLabel[i]->setText(config.players[i].name);
+            QString avatarPath = config.players[i].avatarPath;
+            QPixmap cardImage(avatarPath);
 
-        scoreAvatar[i]->setPixmap(cardImage.scaled(120, 140, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-        applyRoundedCorners(scoreAvatar[i]);
+            scoreAvatar[i]->setPixmap(cardImage.scaled(120, 140, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+            applyRoundedCorners(scoreAvatar[i]);
+        }
+
+        stackedWidget->setCurrentIndex(2);
+
+        QString manoText = QString("MANO N. %1").arg(state.hand + 1);
+        if (config.giocoACoppie)
+        {
+            manoText += QString(" - <font color='%1'>%2</font> e <font color='%1'>%3</font> vs <font color='%4'>%5</font> e <font color='%4'>%6</font>")
+                            .arg(colBlu)
+                            .arg(config.players[0].name)
+                            .arg(config.players[2].name)
+                            .arg(colArancio)
+                            .arg(config.players[1].name)
+                            .arg(config.players[3].name);
+        }
+        manoLabel->setText(manoText);
+    }
+    else
+    {
+        fprintf(stderr, "fine MANO N. %d\n", state.hand + 1);
+        fflush(stderr);
     }
 
     state.phase = MatchPhase::Scoring;
 
-    // visualizza schermo punteggi
-
-    stackedWidget->setCurrentIndex(2);
-    // outputArea->clear();
-
-    QString manoText = QString("MANO N. %1").arg(state.hand + 1);
-
-    if (config.giocoACoppie)
-    {
-        manoText += QString(" - <font color='%1'>%2</font> e <font color='%1'>%3</font> vs <font color='%4'>%5</font> e <font color='%4'>%6</font>")
-                        .arg(colBlu)
-                        .arg(config.players[0].name)
-                        .arg(config.players[2].name)
-                        .arg(colArancio)
-                        .arg(config.players[1].name)
-                        .arg(config.players[3].name);
-    }
-
-    manoLabel->setText(manoText);
-
+    // --- 2. CALCOLO PUNTEGGI (Logica Pura - Critico per Headless) ---
     if (config.giocoACoppie)
     {
         for (int i = 0; i < 2; ++i)
@@ -2061,179 +2203,143 @@ void Cirulla::handleEndOfGame()
         }
     }
 
-    // Carte, denari e primiera
-
     for (int i = 0; i < 3; i++)
     {
         calcolaPunti(i);
     }
 
-    // VISUALIZZAZIONE
-
-    for (int i = 0; i < 4; ++i)
+    // --- 3. AGGIORNAMENTO UI VISUALIZZAZIONE PUNTEGGI (Solo GUI) ---
+    if (!testGameMode)
     {
-        // Clear the text label
-        primieraText[i]->clear();
-
-        // Clear all thumbnails
-        for (int j = 0; j < 4; ++j)
+        for (int i = 0; i < 4; ++i)
         {
-            primieraThumbnails[i][j]->clear();
-            primieraThumbnails[i][j]->hide(); // Optional: hides the empty slot
-        }
-    }
-
-    // outputArea->append("Primiera:");
-
-    int limite = config.giocoACoppie ? 2 : 4;
-
-    for (int i = 0; i < limite; ++i)
-    {
-
-        lblScope[i]->setStyleSheet("color: #2ecc71; font-weight: bold;");
-        lblScope[i]->setText(QString("Scope: %1").arg(state.seats[i].punteggi[state.hand].scope));
-
-        QString carteResult = QString("N. Carte: %1").arg(state.seats[i].punteggi[state.hand].carte);
-        if (state.seats[i].punteggi[state.hand].cartePunto == 1)
-        {
-            // Il giocatore ha la maggioranza: mettiamo il testo in verde e aggiungiamo un segno distintivo
-            lblCarte[i]->setText(carteResult + " [Punto!]");
-            lblCarte[i]->setStyleSheet("color: #2ecc71; font-weight: bold;"); // Verde brillante
-        }
-        else
-        {
-            // Nessun punto o pareggio
-            lblCarte[i]->setText(carteResult);
-        }
-
-        // DENARI
-        QString denariResult = QString("N. Denari: %1").arg(state.seats[i].punteggi[state.hand].denari);
-
-        if (state.seats[i].punteggi[state.hand].denariPunto == 1)
-        {
-            // Il giocatore ha la maggioranza: mettiamo il testo in verde e aggiungiamo un segno distintivo
-            lblDenari[i]->setText(denariResult + " [Punto!]");
-            lblDenari[i]->setStyleSheet("color: #2ecc71; font-weight: bold;"); // Verde brillante
-        }
-        else
-        {
-            // Nessun punto o pareggio
-            lblDenari[i]->setText(denariResult);
-        }
-
-        // SETTEBELLO
-        if (state.seats[i].punteggi[state.hand].settebello == 1)
-        {
-            // Il giocatore ha il settebello
-            lblSettebello[i]->setText("Settebello: 1 [Punto!]");
-            lblSettebello[i]->setStyleSheet("color: #2ecc71; font-weight: bold;"); // Verde brillante
-        }
-        else
-        {
-            // Nessun punto
-            lblSettebello[i]->setText("Settebello: -");
-        }
-
-        // PRIMIERA
-
-        for (int j = 0; j < 4; ++j)
-        {
-
-            QString cardPath =
-                QString("cards/%1.png").arg(state.seats[i].punteggi[state.hand].primieraCarte[j].id + 1);
-            QString info = QString("%1 di %2, ")
-                               .arg(state.seats[i].punteggi[state.hand].primieraCarte[j].faceValue)
-                               .arg(cartaSemeToString(state.seats[i].punteggi[state.hand].primieraCarte[j].seme)); // Usa una funzione helper
-
-            // outputArea->insertPlainText(info);
-
-            if (state.seats[i].punteggi[state.hand].primieraCarte[j].faceValue > 0)
+            primieraText[i]->clear();
+            for (int j = 0; j < 4; ++j)
             {
-
-                primieraThumbnails[i][j]->setPixmap(cardPath);
-                primieraThumbnails[i][j]->show();
+                primieraThumbnails[i][j]->clear();
+                primieraThumbnails[i][j]->hide();
             }
         }
 
-        // outputArea->append("");
+        int limite = config.giocoACoppie ? 2 : 4;
+        for (int i = 0; i < limite; ++i)
+        {
+            lblScope[i]->setStyleSheet("color: #2ecc71; font-weight: bold;");
+            lblScope[i]->setText(QString("Scope: %1").arg(state.seats[i].punteggi[state.hand].scope));
 
-        primieraLayout[i]->addWidget(primieraText[i]);
+            QString carteResult = QString("N. Carte: %1").arg(state.seats[i].punteggi[state.hand].carte);
+            if (state.seats[i].punteggi[state.hand].cartePunto == 1)
+            {
+                lblCarte[i]->setText(carteResult + " [Punto!]");
+                lblCarte[i]->setStyleSheet("color: #2ecc71; font-weight: bold;");
+            }
+            else
+            {
+                lblCarte[i]->setText(carteResult);
+            }
 
-        if (state.seats[i].punteggi[state.hand].primieraPunto == 1)
-        {
-            // Il giocatore ha la primiera
-            primieraText[i]->setText("Primiera: 1 [Punto!]");
-            primieraText[i]->setStyleSheet("color: #2ecc71; font-weight: bold;"); // Verde brillante
-        }
-        else
-        {
-            // Nessun punto
-            primieraText[i]->setText("Primiera: -");
-        }
+            QString denariResult = QString("N. Denari: %1").arg(state.seats[i].punteggi[state.hand].denari);
+            if (state.seats[i].punteggi[state.hand].denariPunto == 1)
+            {
+                lblDenari[i]->setText(denariResult + " [Punto!]");
+                lblDenari[i]->setStyleSheet("color: #2ecc71; font-weight: bold;");
+            }
+            else
+            {
+                lblDenari[i]->setText(denariResult);
+            }
 
-        // PICCOLA
+            if (state.seats[i].punteggi[state.hand].settebello == 1)
+            {
+                lblSettebello[i]->setText("Settebello: 1 [Punto!]");
+                lblSettebello[i]->setStyleSheet("color: #2ecc71; font-weight: bold;");
+            }
+            else
+            {
+                lblSettebello[i]->setText("Settebello: -");
+            }
 
-        if (state.seats[i].punteggi[state.hand].piccola > 0)
-        {
-            // Il giocatore ha la piccola
-            lblPiccola[i]->setText(QString("Piccola: %1 punti!").arg(state.seats[i].punteggi[state.hand].piccola));
-            lblPiccola[i]->setStyleSheet("color: #2ecc71; font-weight: bold;"); // Verde brillante
-        }
-        else
-        {
-            // Nessun punto
-            lblPiccola[i]->setText("Piccola: -");
-        }
+            for (int j = 0; j < 4; ++j)
+            {
+                QString cardPath = QString("cards/%1.png").arg(state.seats[i].punteggi[state.hand].primieraCarte[j].id + 1);
+                if (state.seats[i].punteggi[state.hand].primieraCarte[j].faceValue > 0)
+                {
+                    primieraThumbnails[i][j]->setPixmap(cardPath);
+                    primieraThumbnails[i][j]->show();
+                }
+            }
 
-        // GRANDE
+            primieraLayout[i]->addWidget(primieraText[i]);
+            if (state.seats[i].punteggi[state.hand].primieraPunto == 1)
+            {
+                primieraText[i]->setText("Primiera: 1 [Punto!]");
+                primieraText[i]->setStyleSheet("color: #2ecc71; font-weight: bold;");
+            }
+            else
+            {
+                primieraText[i]->setText("Primiera: -");
+            }
 
-        if (state.seats[i].punteggi[state.hand].grande > 0)
-        {
-            // Il giocatore ha la grande
-            lblGrande[i]->setText(QString("Grande: %1 punti!").arg(state.seats[i].punteggi[state.hand].grande));
-            lblGrande[i]->setStyleSheet("color: #2ecc71; font-weight: bold;"); // Verde brillante
-        }
-        else
-        {
-            // Nessun punto
-            lblGrande[i]->setText("Grande: -");
-        }
+            if (state.seats[i].punteggi[state.hand].piccola > 0)
+            {
+                lblPiccola[i]->setText(QString("Piccola: %1 punti!").arg(state.seats[i].punteggi[state.hand].piccola));
+                lblPiccola[i]->setStyleSheet("color: #2ecc71; font-weight: bold;");
+            }
+            else
+            {
+                lblPiccola[i]->setText("Piccola: -");
+            }
 
-        state.seats[i].puntiMano.push_back(state.seats[i].punteggi[state.hand].calcolaTotale());
-        if (config.giocoACoppie)
-        {
-            state.seats[i + 2].puntiMano.push_back(state.seats[i].punteggi[state.hand].calcolaTotale());
+            if (state.seats[i].punteggi[state.hand].grande > 0)
+            {
+                lblGrande[i]->setText(QString("Grande: %1 punti!").arg(state.seats[i].punteggi[state.hand].grande));
+                lblGrande[i]->setStyleSheet("color: #2ecc71; font-weight: bold;");
+            }
+            else
+            {
+                lblGrande[i]->setText("Grande: -");
+            }
+
+            state.seats[i].puntiMano.push_back(state.seats[i].punteggi[state.hand].calcolaTotale());
+            if (config.giocoACoppie)
+            {
+                state.seats[i + 2].puntiMano.push_back(state.seats[i].punteggi[state.hand].calcolaTotale());
+            }
+            lblTotale[i]->setText(QString("Totale: %1").arg(state.seats[i].puntiMano[state.hand]));
+            lblTotale[i]->setStyleSheet("color: #dc046d; font-weight: bold;");
+            if (config.giocoACoppie)
+            {
+                lblTotale[i + 2]->setText(QString("Totale: %1").arg(state.seats[i + 2].puntiMano[state.hand]));
+                lblTotale[i + 2]->setStyleSheet("color: #dc046d; font-weight: bold;");
+            }
         }
-        lblTotale[i]->setText(QString("Totale: %1").arg(state.seats[i].puntiMano[state.hand]));
-        lblTotale[i]->setStyleSheet("color: #dc046d; font-weight: bold;");
-        if (config.giocoACoppie)
+    }
+    else
+    {
+        // In modalità test calcoliamo comunque i totali mano necessari per i bot
+        for (int i = 0; i < (config.giocoACoppie ? 2 : 4); ++i)
         {
-            lblTotale[i + 2]->setText(QString("Totale: %1").arg(state.seats[i + 2].puntiMano[state.hand]));
-            lblTotale[i + 2]->setStyleSheet("color: #dc046d; font-weight: bold;");
+            state.seats[i].puntiMano.push_back(state.seats[i].punteggi[state.hand].calcolaTotale());
+            if (config.giocoACoppie)
+            {
+                state.seats[i + 2].puntiMano.push_back(state.seats[i].punteggi[state.hand].calcolaTotale());
+            }
         }
     }
 
-    // Logica di fine mano - attribuzione valore alle mosse
-
+    // --- 4. APPRENDIMENTO E REWARD BOT (Logica Pura - Fondamentale per i test) ---
     std::vector<int> partialRank = {0, 1, 2, 3};
     std::sort(partialRank.begin(), partialRank.end(), [this](int i, int j)
               { return state.seats[i].puntiMano[state.hand] > state.seats[j].puntiMano[state.hand]; });
-    fprintf(stderr, "\nvettore classifica parziale: ");
-    for (int i = 0; i < 4; ++i)
-    {
-        fprintf(stderr, "%d ", partialRank[i]);
-    }
-    fprintf(stderr, "\n");
-    fflush(stderr);
+
     for (int pos = 0; pos < 4; ++pos)
     {
-        int playerIdx = partialRank[pos]; // L'ID del giocatore in questa posizione
+        int playerIdx = partialRank[pos];
         int playerScore = state.seats[playerIdx].puntiMano[state.hand];
         int winnerScore = state.seats[partialRank[0]].puntiMano[state.hand];
 
         int baseRewardByPosition[4] = {10, 5, 0, -10};
-
-        int gap = playerScore - winnerScore; // negative when the player is behind
+        int gap = playerScore - winnerScore;
         int gapModifier = std::clamp(gap / 20, -2, 2);
 
         int reward = baseRewardByPosition[pos] + gapModifier;
@@ -2244,12 +2350,8 @@ void Cirulla::handleEndOfGame()
             bool found = false;
             for (auto &rankedSituation : config.players[playerIdx].rankedMoves)
             {
-                // Controllo equivalenza: move + played (come avevi pensato)
                 if (situation == rankedSituation.situation)
                 {
-                    fprintf(stderr, "---------------->FOUND IN ARCHIVE<---------------------\n");
-                    fflush(stderr);
-
                     rankedSituation.rank += reward;
                     found = true;
                     break;
@@ -2266,13 +2368,10 @@ void Cirulla::handleEndOfGame()
         }
     }
 
-    QString logMsg = config.players[1].rankedMovesToString();
-
-    fprintf(stderr, "%s", logMsg.toLocal8Bit().constData());
-
     fprintf(stderr, "DIMENSIONI VETTORE SITUATIONS GIOCATORE 1: %lu\n", config.players[1].rankedMoves.size());
     fflush(stderr);
 
+    // --- 5. AGGIORNAMENTO PUNTEGGI DI PARTITA ---
     if (config.giocoACoppie)
     {
         if (state.seats[0].puntiMano[state.hand] > state.seats[1].puntiMano[state.hand])
@@ -2294,61 +2393,71 @@ void Cirulla::handleEndOfGame()
         }
     }
 
-    // visualizza punteggio mano
-    for (int i = 0; i < 4; i++)
+    if (!testGameMode)
     {
-        labelPunti[i]->setText(QString("Punti: %1")
-                                   .arg(state.seats[i].puntiPartita));
+        for (int i = 0; i < 4; i++)
+        {
+            labelPunti[i]->setText(QString("Punti: %1").arg(state.seats[i].puntiPartita));
+        }
     }
 
+    // --- 6. GESTIONE FINE MATCH / CONTINUAZIONE ---
     if (config.giocoACoppie)
     {
-        // Recupera i totali attuali (che sappiamo essere aggiornati correttamente)
         int puntiSquadraA = state.seats[0].puntiPartita;
         int puntiSquadraB = state.seats[1].puntiPartita;
 
-        // Controllo se qualcuno ha vinto la PARTITA (raggiunto i 2 punti)
         if (puntiSquadraA >= 2 || puntiSquadraB >= 2)
         {
             if (puntiSquadraA >= 2)
             {
                 ++config.players[0].wonMatches;
                 ++config.players[2].wonMatches;
-                changeExpression("happy", 0);
-                changeExpression("happy", 2);
+                if (!testGameMode)
+                {
+                    changeExpression("happy", 0);
+                    changeExpression("happy", 2);
+                }
             }
             else
             {
                 ++config.players[1].wonMatches;
                 ++config.players[3].wonMatches;
-                changeExpression("happy", 1);
-                changeExpression("happy", 3);
+                if (!testGameMode)
+                {
+                    changeExpression("happy", 1);
+                    changeExpression("happy", 3);
+                }
             }
-            QString vincitore = (puntiSquadraA >= 2) ? config.players[0].name + " e " + config.players[2].name
-                                                     : config.players[1].name + " e " + config.players[3].name;
-            QString colore = (puntiSquadraA >= 2) ? colBlu : colArancio;
 
-            QString winnerText = QString("<font size=18>Vincono</font> <font color='%1' size=20>%2 !</font>")
-                                     .arg(colore)
-                                     .arg(vincitore);
+            if (!testGameMode)
+            {
+                QString vincitore = (puntiSquadraA >= 2) ? config.players[0].name + " e " + config.players[2].name : config.players[1].name + " e " + config.players[3].name;
+                QString colore = (puntiSquadraA >= 2) ? colBlu : colArancio;
+                QString winnerText = QString("<font size=18>Vincono</font> <font color='%1' size=20>%2 !</font>").arg(colore).arg(vincitore);
+                updateOverlay(winnerText, "Fine Partita", true);
 
-            updateOverlay(winnerText, "Fine Partita", true);
-
-            // fine gioco a coppie - ritorno alla schermata di partenza e trasmetti i nuovi dati giocatori
-            statoAttualeBottone = FaseBottone::RitornoHomeScreen;
-            emit gameFinished(config.players); // Passi i profili aggiornati alla HomeScreen
+                statoAttualeBottone = FaseBottone::RitornoHomeScreen;
+                emit gameFinished(config.players);
+            }
+            else
+            {
+                mainScreen();
+            }
         }
         else
         {
             ++state.hand;
             state.phase = MatchPhase::Playing;
-
-            // Connect the button's clicked signal to your continueGame function
-            updateOverlay(" CONTINUA IL GIOCO", "CONTINUA", true);
-            statoAttualeBottone = FaseBottone::FaseFineTurno;
-
-            // outputArea->append("Punteggio parziale: Squadra A " + QString::number(puntiSquadraA) +
-            //                    " - Squadra B " + QString::number(puntiSquadraB));
+            if (!testGameMode)
+            {
+                updateOverlay(" CONTINUA IL GIOCO", "CONTINUA", true);
+                statoAttualeBottone = FaseBottone::FaseFineTurno;
+            }
+            else
+            {
+                continueGame();
+            }
         }
     }
     else if (state.hand > 1)
@@ -2369,46 +2478,60 @@ void Cirulla::handleEndOfGame()
                 conteggioMassimi++;
             }
         }
+
         if (conteggioMassimi == 1)
         {
             ++config.players[indiceVincitore].wonMatches;
-            QString vincitore = config.players[indiceVincitore].name;
+            if (!testGameMode)
+            {
+                QString vincitore = config.players[indiceVincitore].name;
+                QString colore = (indiceVincitore % 2 == 0) ? colBlu : colArancio;
+                QString winnerText = QString("<font size=18>Vince</font> <font color='%1' size=20>%2 !</font>").arg(colore).arg(vincitore);
+                changeExpression("happy", indiceVincitore);
+                updateOverlay(winnerText, "Fine Partita", true);
 
-            QString colore = (indiceVincitore % 2 == 0) ? colBlu : colArancio;
-
-            QString winnerText = QString("<font size=18>Vince</font> <font color='%1' size=20>%2 !</font>")
-                                     .arg(colore)
-                                     .arg(vincitore);
-            changeExpression("happy", indiceVincitore);
-
-            updateOverlay(winnerText, "Fine Partita", true);
-            // fine gioco individuale - ritorno alla schermata di partenza e trasmetti i nuovi dati giocatori
-            statoAttualeBottone = FaseBottone::RitornoHomeScreen;
-            emit gameFinished(config.players); // Passi i profili aggiornati alla HomeScreen
+                statoAttualeBottone = FaseBottone::RitornoHomeScreen;
+                emit gameFinished(config.players);
+            }
+            else
+            {
+                mainScreen();
+            }
         }
         else
         {
             ++state.hand;
             state.phase = MatchPhase::Playing;
-
-            // Connect the button's clicked signal to your continueGame function
-            updateOverlay(" PAREGGIO : CONTINUA IL GIOCO", "CONTINUA", true);
-            statoAttualeBottone = FaseBottone::FaseFineTurno;
+            if (!testGameMode)
+            {
+                updateOverlay(" PAREGGIO : CONTINUA IL GIOCO", "CONTINUA", true);
+                statoAttualeBottone = FaseBottone::FaseFineTurno;
+            }
+            else
+            {
+                continueGame();
+            }
         }
     }
     else
     {
         ++state.hand;
         state.phase = MatchPhase::Playing;
-
-        // Connect the button's clicked signal to your continueGame function
-        updateOverlay(" CONTINUA IL GIOCO", "CONTINUA", true);
-        statoAttualeBottone = FaseBottone::FaseFineTurno;
+        if (!testGameMode)
+        {
+            updateOverlay(" CONTINUA IL GIOCO", "CONTINUA", true);
+            statoAttualeBottone = FaseBottone::FaseFineTurno;
+        }
+        else
+        {
+            continueGame();
+        }
     }
 }
 
 void Cirulla::continueGame()
 {
+    // --- 1. RESET LOGICO (Comune a entrambe le modalità) ---
     state.dealerIndex = (state.dealerIndex + 1) % 4;
 
     selectedHandCardIndex = -1;
@@ -2421,23 +2544,45 @@ void Cirulla::continueGame()
         state.seats[i].scope.clear();
         state.seats[i].hand.clear();
         state.seats[i].totaleScope = 0;
+
+        // aggiornaStats ha già il controllo testGameMode interno, ma possiamo lasciarlo o proteggerlo
         aggiornaStats(i);
-        mazzoScopeIconArr[i]->clear();
-        mazzoPreseIconArr[i]->clear();
+
         state.seats[i].carteScoperte = false;
         config.players[i].moves.clear();
     }
     state.playedCards.clear();
 
-    stackedWidget->setCurrentIndex(1);
-    showTable();
-    showHands();
-    statoAttualeBottone = FaseSmazzata;
-    updateOverlay(QString("%1 è il nuovo Mazziere!").arg(state.seats[state.dealerIndex].name), "Inizia la smazzata", true);
+    // --- 2. GESTIONE GRAFICA VS HEADLESS ---
+    if (!testGameMode)
+    {
+        // Pulizia icone visive (solo GUI)
+        for (int i = 0; i < state.seats.size(); ++i)
+        {
+            if (mazzoScopeIconArr[i])
+                mazzoScopeIconArr[i]->clear();
+            if (mazzoPreseIconArr[i])
+                mazzoPreseIconArr[i]->clear();
+        }
+
+        stackedWidget->setCurrentIndex(1);
+        showTable();
+        showHands();
+        statoAttualeBottone = FaseSmazzata;
+        updateOverlay(QString("%1 è il nuovo Mazziere!").arg(state.seats[state.dealerIndex].name), "Inizia la smazzata", true);
+    }
+    else
+    {
+
+        executeDeal();
+    }
 }
 
 void Cirulla::aggiornaMazzoPrese(PlayerState &p)
 {
+    if (testGameMode)
+        return; // Non aggiorniamo la visualizzazione delle prese in testGameMode
+
     QPixmap retro("cards/back-teal.png");
     mazzoPreseIconArr[p.id]->setPixmap(retro.scaled(50, 70, Qt::KeepAspectRatio));
     aggiornaStats(p.id);
@@ -2445,6 +2590,8 @@ void Cirulla::aggiornaMazzoPrese(PlayerState &p)
 
 void Cirulla::aggiornaMazzoScope(PlayerState &p, Carta &c)
 {
+    if (testGameMode)
+        return; // Non aggiorniamo la visualizzazione dello scope in testGameMode
 
     QString cartaIconPath = QString("cards/%1.png").arg(c.id + 1);
 
@@ -2528,10 +2675,12 @@ bool Cirulla::checkBuonaDaTre(int playerIndex)
                 indexMatta = i;
         int valoreScelto;
 
-        if (playerIndex == config.humanSeatIndex)
+        if (playerIndex == config.humanSeatIndex && !testGameMode && !botGame)
         {
+
             do
             {
+
                 valoreScelto = QInputDialog::getInt(nullptr, "Buona da tre",
                                                     "Scegli un valore per la matta (1-6) tale che la somma sia <= 9:",
                                                     1, 1, 6, 1);
@@ -2561,40 +2710,47 @@ void Cirulla::applyBuonaDaDieci(int playerIndex)
     state.seats[playerIndex].carteScoperte = true;
     state.seats[playerIndex].totaleScope += 10;
     aggiornaStats(playerIndex);
-    showHands();
-    isWaitingForBuona = true;
+    if (!testGameMode)
+    {
+        showHands();
+        isWaitingForBuona = true;
+    }
+    else
+    {
+        isWaitingForBuona = false;
+    }
 }
 
 void Cirulla::applyBuonaDaTre(int playerIndex)
 {
-    // outputArea->append("--- START BUONA DA TRE ---");
-    // outputArea->append("Giocatore che accusa:" + state.seats[playerIndex].name);
-    // outputArea->append("Carte in mano (prima della modifica):");
-    for (auto &c : state.seats[playerIndex].hand)
-    {
-        // outputArea->append(QString("ID: %1 Valore: %2").arg(c.id).arg(c.faceValue));
-    }
 
     if (playerIndex < 0 || playerIndex >= state.seats.size())
     {
-        // outputArea->append("ERRORE CRITICO: Indice giocatore non valido!");
+        fprintf(stderr, "ERRORE CRITICO: Indice giocatore non valido!\n");
+        fflush(stderr);
         return;
     }
     {
         state.seats[playerIndex].carteScoperte = true;
         state.seats[playerIndex].totaleScope += 3;
         aggiornaStats(playerIndex);
-        showHands();
-        isWaitingForBuona = true;
+        if (!testGameMode)
+        {
+            showHands();
+            isWaitingForBuona = true;
+        }
+        else
+        {
+            isWaitingForBuona = false; // non e' necessario attendere in testGameMode
+        }
     }
 }
 
 void Cirulla::aggiornaStats(int playerIndex)
 {
-    // fprintf(stderr, "DEBUG: playerIndex: %d\n", playerIndex);
-    // fprintf(stderr, "Size config.players: %zu\n", (size_t)config.players.size());
-    // fprintf(stderr, "Size state.seats: %zu\n", (size_t)state.seats.size());
-    // fflush(stderr);
+
+    if (testGameMode)
+        return; // Non aggiornare le stats in modalità test
     mazzoTextArr[playerIndex]->setText(config.players[playerIndex].name +
                                        "\nPrese: " + QString::number(state.seats[playerIndex].prese.size()) +
                                        "\nScope: " + QString::number(state.seats[playerIndex].totaleScope));
